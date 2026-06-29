@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}About — Phishing Email Detector{% endblock %}
+
+{% block content %}
+<a href="javascript:history.length > 1 ? history.back() : window.location.assign('{{ url_for('home') }}')"
+    class="page-go-back" aria-label="Go back">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M9.5 3 5 8l4.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+            stroke-linejoin="round" />
+    </svg>
+    Go back
+</a>
+
+<section class="hero">
+    <div class="hero-copy">
+        <h1 class="title">About this project</h1>
+        <p class="subtitle">
+            This tool detects phishing emails using machine learning.
+            The project is designed to be readable and security-focused — showing a verdict and the top contributing
+            indicators.
+        </p>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="About sections">
+        <span class="tab" aria-selected="true" role="tab">Overview</span>
+        <a class="tab" href="{{ url_for('home') }}" role="tab" aria-selected="false" style="text-decoration:none;">
+            Run an analysis
+        </a>
+    </div>
+</section>
+
+<section class="card">
+    <h2 class="result-title">What you can do</h2>
+    <ul class="bullets">
+        <li>Paste an email message and receive a verdict: <strong>Phishing</strong> or <strong>Legitimate</strong>.</li>
+        <li>See a confidence score for the classifier output.</li>
+        <li>Review top indicators that support the decision.</li>
+    </ul>
+</section>
+
+<section class="card">
+    <h2 class="result-title">Security note</h2>
+    <ul class="bullets">
+        <li><strong>Privacy first:</strong> Your email data is never sent to a backend server, stored, or tracked. Any
+            saved history remains entirely on your account.</li>
+        <li><strong>Open and transparent:</strong> The entire source code is fully open-source. Anyone can audit the
+            logic to verify how text inputs are analyzed.</li>
+    </ul>
+
+    <div style="margin-top: 14px;">
+        <a class="btn" href="{{ url_for('security_advice') }}" style="text-decoration:none;">
+            View security advice
+        </a>
+    </div>
+</section>
+
+{% endblock %}

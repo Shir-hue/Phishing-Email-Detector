@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+venv/
+
+# Flask
+instance/
+
+# Frontend build artifacts (if any)
+dist/
+build/
+
+
+
+# IDE
+.vscode/
+
+
+# Docs 
+docs/
+
+
+# Backups
+backup/

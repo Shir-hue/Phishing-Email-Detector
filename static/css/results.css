@@ -1,0 +1,211 @@
+/* ============================================================
+   results.css
+   The analysis results page: the verdict / email-input two-card
+   grid, the phishing/legitimate badges, the "edit email" modal,
+   and the false-positive notice toast.
+   ============================================================ */
+
+.grid{display:grid; grid-template-columns: 1fr; gap: 14px; align-items: stretch;}
+@media (min-width: 980px){
+  .grid{grid-template-columns: 1fr 1fr;}
+  .hero{grid-template-columns: 1fr;}
+}
+.grid > .card{
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.result{display:flex; flex-direction:column; gap:10px;}
+
+.badge{
+  display:inline-flex;
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 1000;
+  letter-spacing:.3px;
+  border: 1px solid var(--border);
+}
+.badge-phish{background: rgba(255,90,95,.14); border-color: rgba(255,90,95,.40); color:#ffd7d8;}
+.badge-legit{background: rgba(46,204,113,.14); border-color: rgba(46,204,113,.40); color:#d9ffe9;}
+
+.confidence{color: var(--muted); font-weight: 800;}
+.confidence-value{color: var(--text); font-weight: 1000;}
+
+.email-box{
+  border: 1px dashed rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(0,0,0,.18);
+  max-height: 420px;
+  overflow:auto;
+}
+.email-box pre{
+  margin:0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+  font-size: 13px;
+}
+
+.email-stats{
+  display:flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.stat{
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+}
+.stat strong{
+  color: var(--text);
+  font-weight: 900;
+}
+
+/* ----- "Edit email" modal ----- */
+
+.modal-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: none;
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+.modal-overlay.is-open{
+  display: flex;
+}
+.modal-panel{
+  width: min(900px, 100%);
+  max-height: min(78vh, 680px);
+  overflow: auto;
+  background: rgba(7,11,20,.82);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+  backdrop-filter: blur(10px);
+}
+.modal-header{
+  margin-bottom: 6px;
+}
+.modal-actions{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* ----- False-positive notice toast ----- */
+
+.toast{
+  position: relative;
+  max-width: min(480px, 100%);
+  margin: 0 0 18px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #0f1729;
+  border: 1px solid rgba(77,163,255,.3);
+  box-shadow: 0 12px 30px rgba(0,0,0,.3);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.toast-icon{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  background: rgba(77,163,255,.16);
+  border: 1px solid rgba(77,163,255,.35);
+  color: var(--primary);
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.toast-body{ flex: 1; min-width: 0; }
+.toast-title{
+  display: block;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 13.5px;
+  margin-bottom: 3px;
+}
+.toast-text{ color: var(--muted); font-weight: 500; }
+.toast-text a{ color: var(--primary); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+
+.toast-close{
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.toast-close:hover{ color: var(--text); border-color: rgba(255,255,255,.2); }
+
+.toast.is-open{
+  display: block;
+  animation: toast-in .18s ease-out forwards;
+}
+
+.toast.is-exit{
+  display: block;
+  animation: toast-out .28s ease-in forwards;
+}
+
+.toast a{
+  color: #bfe7ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.toast a:hover{
+  color: #e7f7ff;
+}
+
+@keyframes toast-in{
+  from{transform: translateX(-10px); opacity:.0;}
+  to{transform: translateX(0); opacity:1;}
+}
+
+@keyframes toast-out{
+  from{transform: translateX(0); opacity:1;}
+  to{transform: translateX(-10px); opacity:.0;}
+}
+
+.toast-row{
+  display:flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+@media (max-width: 520px){
+  textarea{min-height: 180px}
+
+  .toast{
+    top: auto;
+    bottom: 18px;
+    right: 14px;
+    left: 14px;
+    max-width: none;
+  }
+}
+
+@media (max-width: 760px){
+  .grid{ gap: 12px; }
+}

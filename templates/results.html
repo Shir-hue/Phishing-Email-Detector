@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Results — Phishing Email Detector{% endblock %}
+
+{% block content %}
+
+{% if request.args.get('show_false_positive_note') == '1' or request.form.get('show_false_positive_note') == '1' %}
+<div id="falsePositiveRedirectToast" class="toast is-open" role="status" aria-live="polite" aria-atomic="true">
+    <div class="toast-row">
+        <span class="toast-icon" aria-hidden="true">!</span>
+        <div class="toast-body">
+            <span class="toast-title">Heads up</span>
+            <span class="toast-text">False positives may happen. <a href="{{ url_for('security_advice') }}">View
+                    security advice</a> for more info.</span>
+        </div>
+        <button type="button" id="falsePositiveToastCloseBtn" class="toast-close" aria-label="Dismiss">&times;</button>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var t = document.getElementById('falsePositiveRedirectToast');
+        if (!t) return;
+
+        function dismiss() {
+            t.classList.remove('is-open');
+            t.classList.add('is-exit');
+        }
+
+        // After the exit animation finishes, collapse it out of the page flow
+        // so it doesn't leave an empty gap above the content.
+        t.addEventListener('animationend', function (e) {
+            if (t.classList.contains('is-exit')) {
+                t.style.display = 'none';
+            }
+        });
+
+        // Show for 5 seconds, then play outro.
+        var timer = setTimeout(dismiss, 5000);
+
+        // Dismiss right away
+        var closeBtn = document.getElementById('falsePositiveToastCloseBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function () {
+                clearTimeout(timer);
+                dismiss();
+            });
+        }
+
+    })();
+</script>
+{% endif %}
+
+<section class="hero">
+    <div class="hero-copy">
+        <h1 class="title">Analysis results</h1>
+        <p class="subtitle">Security-focused verdict and the top indicators used for the decision.</p>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Result actions">
+        <a class="tab" href="{{ url_for('home') }}" role="tab" aria-selected="true" style="text-decoration:none;">New
+            analysis</a>
+        <a id="viewEmailTab" class="tab" href="#" role="tab" aria-selected="false" style="text-decoration:none;">Edit
+            email</a>
+    </div>
+</section>
+
+<!-- Modal editor (same-page, no new tab/window) -->
+<div id="emailModalOverlay" class="modal-overlay" aria-hidden="true">
+    <div id="emailModalPanel" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="emailModalTitle">
+        <div class="modal-header">
+            <h2 id="emailModalTitle" class="result-title" style="margin:0;">Edit email</h2>
+        </div>
+
+        <form id="emailEditForm" method="post" action="{{ url_for('recalculate') }}">
+            <label for="email_text" class="label" style="margin-top:12px;">Email text</label>
+
+            <textarea id="email_text" name="email_text" rows="12" required>{{ email_text or '' }}</textarea>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn primary">Update results</button>
+                <button type="button" id="closeEmailModalBtn" class="btn" aria-label="Exit">Exit</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<section class="grid">
+    <div class="card">
+        <h2 class="result-title">Verdict</h2>
+
+        <div class="result">
+            {% if label == 'Phishing' %}
+            <span class="badge badge-phish">{{ label }}</span>
+            {% else %}
+            <span class="badge badge-legit">{{ label }}</span>
+            {% endif %}
+
+            <div class="confidence">
+                Confidence: <span class="confidence-value">{{ (confidence * 100) | round(1) }}%</span>
+            </div>
+        </div>
+
+        <h3 class="subheading">Top indicators</h3>
+        <ul class="bullets">
+            {% for item in reason %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+
+        <div class="form-actions">
+            <a class="btn" href="{{ url_for('home') }}">Check another email</a>
+            <a class="btn" href="{{ url_for('security_advice') }}">View security advice</a>
+        </div>
+    </div>
+
+    <div class="card" id="email">
+        <h2 class="result-title">Email input</h2>
+        <div class="email-box" aria-label="Submitted email text">
+            {% if email_text %}
+            <pre>{{ email_text }}</pre>
+            {% else %}
+            <p class="muted">No input provided.</p>
+            {% endif %}
+        </div>
+
+        <div class="email-stats" style="margin-top:10px;">
+            <div class="stat">Word count: <strong>{{ word_count }}</strong></div>
+            <div class="stat">Character count: <strong>{{ char_count }}</strong></div>
+        </div>
+    </div>
+</section>
+
+<script>
+    (function () {
+        const overlay = document.getElementById('emailModalOverlay');
+        const panel = document.getElementById('emailModalPanel');
+        const openTab = document.getElementById('viewEmailTab');
+        const closeBtn = document.getElementById('closeEmailModalBtn');
+        const textarea = document.getElementById('email_text');
+
+        // Discard edits if user closes without saving: always reset to original page value on open/close.
+        const originalEmailText = textarea ? textarea.value : '';
+
+        function openModal() {
+            if (!overlay || !panel || !textarea) return;
+            textarea.value = originalEmailText; // discard any previous unsaved edits
+            overlay.setAttribute('aria-hidden', 'false');
+            overlay.classList.add('is-open');
+            setTimeout(() => textarea.focus(), 0);
+        }
+
+        function closeModal() {
+            if (!overlay || !panel || !textarea) return;
+            textarea.value = originalEmailText; // discard edits when closing without saving
+            overlay.setAttribute('aria-hidden', 'true');
+            overlay.classList.remove('is-open');
+        }
+
+        if (openTab) openTab.addEventListener('click', function (e) {
+            e.preventDefault();
+            openModal();
+        });
+
+        if (closeBtn) closeBtn.addEventListener('click', function () {
+            closeModal();
+        });
+
+        if (overlay) {
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) closeModal(); // outside click
+            });
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open')) {
+                closeModal();
+            }
+        });
+    })();
+</script>
+{% endblock %}

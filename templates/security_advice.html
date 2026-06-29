@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Security Advice{% endblock %}
+
+{% block content %}
+<a href="javascript:history.length > 1 ? history.back() : window.location.assign('{{ url_for('home') }}')"
+    class="page-go-back" aria-label="Go back">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M9.5 3 5 8l4.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+            stroke-linejoin="round" />
+    </svg>
+    Go back
+</a>
+
+<section class="hero">
+    <div class="hero-copy">
+        <h1 class="title">Security advice</h1>
+        <p class="subtitle">Safer habits while reviewing suspicious emails:</p>
+    </div>
+</section>
+
+<section class="card">
+    <h2 class="result-title">Key reminders</h2>
+    <ul class="bullets">
+        <li>Machine learning predictions may occasionally be incorrect. Always review suspicious emails carefully.</li>
+        <li>Verify that the sender's email address matches the organisation they claim to represent.</li>
+        <li>Be cautious of urgent requests, unexpected attachments, or links asking for credentials.</li>
+        <li>If using a workplace or university email account, pay attention to external email warnings provided by your
+            organisation.</li>
+        <li>Avoid clicking links or downloading attachments unless the source is trusted and verified.</li>
+    </ul>
+    <div class="form-actions" style="margin-top: 14px;">
+        <a class="btn primary" href="{{ url_for('home') }}">Run an analysis</a>
+    </div>
+</section>
+{% endblock %}

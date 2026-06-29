@@ -1,0 +1,216 @@
+/* ============================================================
+   base.css
+   Design tokens, resets, and shared building blocks used across
+   every page (buttons, form fields, page wrapper).
+   Load this file first - other stylesheets depend on the
+   CSS variables and base element styles defined here.
+   ============================================================ */
+
+:root{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --card2:#0b1324;
+  --text:#e7eefc;
+  --muted:#aab6d1;
+  --primary:#4da3ff;
+  --primary2:#7c3aed;
+  --border:rgba(255,255,255,.10);
+  --good:#2ecc71;
+  --bad:#ff5a5f;
+  --shadow: 0 18px 55px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  display:flex;
+  flex-direction:column;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  background: linear-gradient(180deg, #070b14, var(--bg));
+  color:var(--text);
+}
+
+.container{width:min(1100px, 92%); margin:0 auto;}
+
+.page{padding:24px 0 54px; flex: 1 0 auto; background: #0a101d;}
+
+/* Shared form basics (textarea, labels) used by the homepage
+   analyzer and the results "edit email" modal. */
+.form{display:flex; flex-direction:column; gap:10px;}
+.label{font-weight:900; color: var(--text); letter-spacing:.2px;}
+
+textarea{
+  width:100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,.18);
+  color: var(--text);
+  resize: vertical;
+  outline:none;
+  min-height: 230px;
+}
+textarea:focus{border-color: rgba(77,163,255,.7); box-shadow: 0 0 0 3px rgba(77,163,255,.15)}
+
+.hint{color: var(--muted); font-weight: 700; font-size: 13px;}
+.muted{color: var(--muted)}
+
+/* Shared button system. .btn / .btn.primary are the original
+   pill-style buttons (used in the homepage analyzer card and
+   results page). .btn-primary / .btn-secondary are the flatter
+   buttons used by the About / Security Advice pages. */
+.form-actions{display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin-top: 8px;}
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+  color: var(--text);
+  text-decoration:none;
+  font-weight: 900;
+  cursor: pointer;
+}
+.btn:hover{border-color: rgba(77,163,255,.6)}
+.btn.primary{
+  border-color: rgba(77,163,255,.55);
+  background: linear-gradient(180deg, rgba(77,163,255,.28), rgba(77,163,255,.14));
+}
+
+.btn-primary{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 12px 24px;
+  border-radius: 7px;
+  border: none;
+  background: var(--primary);
+  color: #04253f;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn-primary:hover{ filter: brightness(1.05); }
+
+.btn-secondary{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 12px 24px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn-secondary:hover{ color: var(--text); border-color: rgba(255,255,255,.2); }
+
+/* Generic page header used by About / Security Advice / Results
+   (large title + subtitle above the content). */
+.page-head{
+  margin: 36px 0 28px;
+}
+.page-title{
+  color: var(--text);
+  font-size: 30px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  letter-spacing: -.3px;
+}
+.page-subtitle{
+  color: var(--muted);
+  font-size: 15px;
+  margin: 0;
+}
+.back-link{
+  display: inline-flex;
+  margin-bottom: 16px;
+}
+
+/* Fixed "go back" link for content pages that still have the
+   header (About, Security Advice). */
+.page-go-back{
+  position: fixed;
+  top: 84px;
+  left: 24px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(12,19,32,.92);
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+}
+.page-go-back:hover{ color: var(--text); border-color: rgba(255,255,255,.18); }
+
+@media (max-width: 760px){
+  .page-go-back{ top: 72px; left: 14px; padding: 8px 12px; font-size: 12.5px; }
+}
+
+/* Shared tab system used on About (underline tabs) and the
+   results / view switching. */
+.view-tabs{
+  display:flex;
+  gap: 28px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  margin-bottom: 28px;
+}
+.view-tab{
+  appearance:none;
+  border:none;
+  background:transparent;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 2px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.view-tab[aria-selected="true"]{
+  color: var(--text);
+  border-bottom-color: var(--primary);
+}
+.view-tab:hover{ color: var(--text); }
+.view-tab:focus-visible{
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(77,163,255,.4);
+  border-radius: 4px;
+}
+
+/* Reusable bordered card used by About / Security Advice. */
+.content-card{
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 8px;
+  background: var(--card2);
+  padding: 22px;
+}
+
+.subheading{margin: 18px 0 10px; font-size: 17px; font-weight: 700;}
+.bullets{margin: 0; padding-left: 20px; color: var(--muted); line-height:1.65; font-weight: 500; font-size: 15px;}
+.result-title{margin:0 0 14px; font-size: 20px; font-weight: 700; letter-spacing:.1px;}
+
+@media (max-width: 760px){
+  .page-title{ font-size: 22px; }
+  .page-subtitle{ font-size: 13px; }
+  .result-title{ font-size: 17px; }
+  .subheading{ font-size: 15px; }
+  .bullets{ font-size: 14px; }
+  .form-actions{
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}

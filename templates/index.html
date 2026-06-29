@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Phishing Email Detector{% endblock %}
+
+{% block content %}
+<div class="home-shell">
+    <div class="page-head">
+        <h1 class="page-title">Check an email for phishing</h1>
+        <p class="page-subtitle">Paste the message below. We'll flag risk signals and explain the verdict.</p>
+    </div>
+
+    <div class="view-tabs" role="tablist" aria-label="Analyzer tabs">
+        <button class="view-tab" id="tab_text" type="button" role="tab" aria-selected="true">Text analyzer</button>
+        <button class="view-tab" id="tab_history" type="button" role="tab" aria-selected="false">History</button>
+    </div>
+
+    <div id="panel_text" role="tabpanel" aria-label="Text analyzer panel">
+        <form action="{{ url_for('predict') }}?show_false_positive_note=1" method="post"
+            aria-label="Email analyzer form">
+            <div class="input-panel">
+                <div class="input-panel-head">
+                    <span class="input-panel-label">Raw email text</span>
+                    <span class="input-panel-counter"><span id="word_count">0</span> words &middot; <span
+                            id="char_count">0</span> chars</span>
+                </div>
+                <textarea id="email_text" name="email_text" rows="10" placeholder="Paste the full email content here..."
+                    required>{{ request.form.get('email_text','') }}</textarea>
+            </div>
+
+            <div class="analyzer-actions">
+                <button type="submit" class="btn-primary">Analyze</button>
+                <span class="muted-note">Security-first &mdash; no data is stored by default.</span>
+            </div>
+        </form>
+
+        <div class="home-signal-grid">
+            <div class="home-signal-cell">
+                <div class="home-signal-tag">01 / signal</div>
+                <div class="home-signal-label">Keyword &amp; intent detection</div>
+            </div>
+            <div class="home-signal-cell">
+                <div class="home-signal-tag">02 / output</div>
+                <div class="home-signal-label">Verdict &amp; confidence score</div>
+            </div>
+            <div class="home-signal-cell">
+                <div class="home-signal-tag">03 / explain</div>
+                <div class="home-signal-label">Top 5 contributing terms</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- History modal (same-page focused overlay) -->
+<div id="historyModalOverlay" class="modal-overlay" aria-hidden="true">
+    <div id="historyModalPanel" class="modal-panel history-modal-panel" role="dialog" aria-modal="true"
+        aria-labelledby="historyModalTitle">
+        <button type="button" id="closeHistoryModalBtn" class="history-modal-x" aria-label="Close">&times;</button>
+        <div class="history-empty">
+            <span class="history-empty-mark" aria-hidden="true">⛨</span>
+            <h2 id="historyModalTitle" class="history-empty-title">Sign in to view your history</h2>
+            <p class="history-empty-text">
+                Your email content is never sent to a server or stored anywhere &mdash; only the verdict and timestamp
+                are saved, and only to your account. This project is fully open source.
+            </p>
+            <div class="history-empty-actions">
+                <a class="btn primary" href="{{ url_for('login') }}">Log in</a>
+                <a class="btn" href="{{ url_for('signup') }}">Sign up</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const tabText = document.getElementById('tab_text');
+        const tabHistory = document.getElementById('tab_history');
+        const overlay = document.getElementById('historyModalOverlay');
+        const panel = document.getElementById('historyModalPanel');
+        const closeBtn = document.getElementById('closeHistoryModalBtn');
+
+        function openHistoryModal() {
+            if (!overlay || !panel) return;
+            overlay.setAttribute('aria-hidden', 'false');
+            overlay.classList.add('is-open');
+            setTimeout(() => closeBtn && closeBtn.focus(), 0);
+        }
+
+        function closeHistoryModal() {
+            if (!overlay || !panel) return;
+            overlay.setAttribute('aria-hidden', 'true');
+            overlay.classList.remove('is-open');
+            // Keep Text Analyzer tab visually selected since History has no inline panel.
+            if (tabText) tabText.setAttribute('aria-selected', 'true');
+            if (tabHistory) tabHistory.setAttribute('aria-selected', 'false');
+        }
+
+        if (tabHistory) tabHistory.addEventListener('click', function () {
+            if (tabText) tabText.setAttribute('aria-selected', 'false');
+            if (tabHistory) tabHistory.setAttribute('aria-selected', 'true');
+            openHistoryModal();
+        });
+
+        if (tabText) tabText.addEventListener('click', function () {
+            if (tabText) tabText.setAttribute('aria-selected', 'true');
+            if (tabHistory) tabHistory.setAttribute('aria-selected', 'false');
+        });
+
+        if (closeBtn) closeBtn.addEventListener('click', closeHistoryModal);
+
+        if (overlay) {
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) closeHistoryModal();
+            });
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open')) {
+                closeHistoryModal();
+            }
+        });
+
+        // ===== Word / character counter =====
+        const ta = document.getElementById('email_text');
+        const wordCount = document.getElementById('word_count');
+        const charCount = document.getElementById('char_count');
+
+        function updateCount() {
+            if (!ta) return;
+            const text = (ta.value || '').trim();
+            const words = text ? text.split(/\s+/).length : 0;
+            if (wordCount) wordCount.textContent = String(words);
+            if (charCount) charCount.textContent = String((ta.value || '').length);
+        }
+
+        if (ta) {
+            ta.addEventListener('input', updateCount);
+            updateCount();
+        }
+    })();
+</script>
+{% endblock %}
