@@ -3,6 +3,11 @@
    The analysis results page: the verdict / email-input two-card
    grid, the phishing/legitimate badges, the "edit email" modal,
    and the false-positive notice toast.
+
+   Verdict + email-input panels now reuse the same panel chrome
+   as the homepage analyzer (.input-panel / .info-panel from
+   home.css) so the page doesn't feel visually disconnected from
+   the rest of the site. Nothing functional changed here.
    ============================================================ */
 
 .grid{display:grid; grid-template-columns: 1fr; gap: 14px; align-items: stretch;}
@@ -33,6 +38,46 @@
 .confidence{color: var(--muted); font-weight: 800;}
 .confidence-value{color: var(--text); font-weight: 1000;}
 
+/* ----- Verdict + email-input panels (now match .input-panel /
+   .info-panel from home.css: same surface, same head bar). ----- */
+
+.result-panel{
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 8px;
+  background: var(--card2);
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.result-panel-head{
+  padding: 13px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  display:flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.result-panel-label{
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+}
+.result-panel-counter{
+  color: #7d8bab;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+  white-space: nowrap;
+}
+.result-panel-body{
+  padding: 18px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .email-box{
   border: 1px dashed rgba(255,255,255,.14);
   border-radius: 14px;
@@ -48,21 +93,6 @@
   color: var(--text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
   font-size: 13px;
-}
-
-.email-stats{
-  display:flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-.stat{
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 13px;
-}
-.stat strong{
-  color: var(--text);
-  font-weight: 900;
 }
 
 /* ----- "Edit email" modal ----- */
@@ -207,6 +237,8 @@
 
 @media (max-width: 760px){
   .grid{ gap: 12px; }
+  .result-panel-head{ padding: 11px 14px; }
+  .result-panel-body{ padding: 14px; }
 }
 
 /* ----- History list ----- */

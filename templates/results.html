@@ -82,47 +82,50 @@
 </div>
 
 <section class="grid">
-    <div class="card">
-        <h2 class="result-title">Verdict</h2>
-
-        <div class="result">
-            {% if label == 'Phishing' %}
-            <span class="badge badge-phish">{{ label }}</span>
-            {% else %}
-            <span class="badge badge-legit">{{ label }}</span>
-            {% endif %}
-
-            <div class="confidence">
-                Confidence: <span class="confidence-value">{{ (confidence * 100) | round(1) }}%</span>
-            </div>
+    <div class="result-panel">
+        <div class="result-panel-head">
+            <span class="result-panel-label">Verdict</span>
         </div>
+        <div class="result-panel-body">
+            <div class="result">
+                {% if label == 'Phishing' %}
+                <span class="badge badge-phish">{{ label }}</span>
+                {% else %}
+                <span class="badge badge-legit">{{ label }}</span>
+                {% endif %}
 
-        <h3 class="subheading">Top indicators</h3>
-        <ul class="bullets">
-            {% for item in reason %}
-            <li>{{ item }}</li>
-            {% endfor %}
-        </ul>
+                <div class="confidence">
+                    Confidence: <span class="confidence-value">{{ (confidence * 100) | round(1) }}%</span>
+                </div>
+            </div>
 
-        <div class="form-actions">
-            <a class="btn" href="{{ url_for('home') }}">Check another email</a>
-            <a class="btn" href="{{ url_for('security_advice') }}">View security advice</a>
+            <h3 class="subheading">Top indicators</h3>
+            <ul class="bullets">
+                {% for item in reason %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+
+            <div class="form-actions">
+                <a class="btn" href="{{ url_for('home') }}">Check another email</a>
+                <a class="btn" href="{{ url_for('security_advice') }}">View security advice</a>
+            </div>
         </div>
     </div>
 
-    <div class="card" id="email">
-        <h2 class="result-title">Email input</h2>
-        <div class="email-box" aria-label="Submitted email text">
-            {% if email_text %}
-            <pre>{{ email_text }}</pre>
-            {% else %}
-            <p class="muted">No input provided.</p>
-            {% endif %}
+    <div class="result-panel" id="email">
+        <div class="result-panel-head">
+            <span class="result-panel-label">Email input</span>
+            <span class="result-panel-counter">{{ word_count }} words &middot; {{ char_count }} chars</span>
         </div>
-
-        <div class="email-stats" style="margin-top:10px;">
-            <div class="stat">Word count: <strong>{{ word_count }}</strong></div>
-            <div class="stat">Character count: <strong>{{ char_count }}</strong></div>
+        <div class="result-panel-body">
+            <div class="email-box" aria-label="Submitted email text">
+                {% if email_text %}
+                <pre>{{ email_text }}</pre>
+                {% else %}
+                <p class="muted">No input provided.</p>
+                {% endif %}
+            </div>
         </div>
     </div>
 </section>
