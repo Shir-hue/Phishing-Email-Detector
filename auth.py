@@ -1,9 +1,5 @@
 """
 Thin wrapper around the Supabase Python client for auth + history.
-
-Keeping this in its own file means app.py doesn't get cluttered with
-Supabase-specific error handling, and if you ever swap auth providers
-later, this is the only file that has to change.
 """
 from __future__ import annotations
 import os
@@ -27,11 +23,6 @@ class AuthError(Exception):
 
 
 def sign_up(email: str, password: str) -> Dict[str, Any]:
-    """
-    Creates a new Supabase user with email + password.
-    Returns a dict with the user's id/email/access_token on success.
-    Raises AuthError with a human-readable message on failure.
-    """
     try:
         result = supabase.auth.sign_up({"email": email, "password": password})
     except Exception as exc:
@@ -41,11 +32,10 @@ def sign_up(email: str, password: str) -> Dict[str, Any]:
         raise AuthError("Sign up failed. Please try again.")
 
     if result.session is None:
-        # Email confirmation is enabled in Supabase, so there's no
-        # session yet. Since I decided that we're not using the confirm-email flow anymore, at least for now
-        # treat this as a hard error so it's obvious in testing -
+        # Email confirmation is still enabled in Supabase — turn it off
+        # in Authentication > Providers > Email > Confirm email.
         raise AuthError(
-            "Account created, but sign-in is not available yet. "
+            "Account created but email confirmation is required. "
             "Please contact support."
         )
 
@@ -57,11 +47,6 @@ def sign_up(email: str, password: str) -> Dict[str, Any]:
 
 
 def sign_in(email: str, password: str) -> Dict[str, Any]:
-    """
-    Logs in an existing user with email + password.
-    Returns a dict with the user's id/email/access_token on success.
-    Raises AuthError with a human-readable message on failure.
-    """
     try:
         result = supabase.auth.sign_in_with_password(
             {"email": email, "password": password}
@@ -77,30 +62,48 @@ def sign_in(email: str, password: str) -> Dict[str, Any]:
 
 
 def sign_out() -> None:
-    """Best-effort sign out on the Supabase side."""
     try:
         supabase.auth.sign_out()
     except Exception:
-        # Not critical if this fails — we clear the Flask session
-        # regardless, which is what actually logs the user out of
-        # *this app*.
         pass
 
 
-def _client_for(access_token: str | None) -> Client:
+def send_password_reset(email: str, redirect_url: str | None = None) -> None:
     """
-    Builds a Supabase client scoped to one user's request.
+    Sends a password reset email via Supabase.
+    The user will receive a link that redirects to redirect_url with
+    recovery tokens in the URL fragment (#access_token=...&type=recovery).
+    Raises AuthError on failure.
+    """
+    try:
+        options = {}
+        if redirect_url:
+            options["redirect_to"] = redirect_url
+        supabase.auth.reset_password_email(email, options)
+    except Exception as exc:
+        raise AuthError(_clean_error(exc)) from exc
 
-    Why this matters: the module-level `supabase` client is shared
-    across every request in the Flask process. If we used it directly
-    for database calls, Postgres would see every request as coming
-    from the anonymous (anon) role, since login state isn't global -
-    it's per-request. Row Level Security policies check auth.uid(),
-    which only resolves correctly when the user's own access token is
-    attached to the client making the call. So for any call that needs
-    to act "as" a specific user, we create a short-lived client and set
-    its session to that user's token first.
+
+def update_password(access_token: str, refresh_token: str | None, new_password: str) -> None:
     """
+    Updates the user's password using their recovery tokens.
+    Called after the user clicks the reset link in their email and
+    submits a new password on the reset page.
+    Raises AuthError if the tokens are invalid or expired.
+    """
+    try:
+        client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        # Set the recovery session so Supabase knows who is resetting
+        client.auth.set_session(access_token, refresh_token or "")
+        client.auth.update_user({"password": new_password})
+    except Exception as exc:
+        raise AuthError(
+            "Could not update your password. Your reset link may have expired — "
+            "please request a new one."
+        ) from exc
+
+
+def _client_for(access_token: str | None) -> Client:
     client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
     if access_token:
         client.postgrest.auth(access_token)
@@ -110,7 +113,6 @@ def _client_for(access_token: str | None) -> Client:
 def save_prediction(
     user_id: str, email_text: str, label: str, confidence: float, access_token: str | None = None
 ) -> None:
-    """Inserts one row into the predictions table for this user."""
     client = _client_for(access_token)
     client.table("predictions").insert(
         {
@@ -123,7 +125,6 @@ def save_prediction(
 
 
 def get_history(user_id: str, access_token: str | None = None, limit: int = 50) -> List[Dict[str, Any]]:
-    """Fetches this user's past predictions, newest first."""
     client = _client_for(access_token)
     response = (
         client.table("predictions")
@@ -144,11 +145,6 @@ def update_prediction(
     confidence: float,
     access_token: str | None = None,
 ) -> None:
-    """
-    Overwrites one existing history row with re-analyzed text/label/
-    confidence. Scoped to user_id so RLS (and this extra check) make
-    sure nobody can edit a row that isn't theirs.
-    """
     client = _client_for(access_token)
     client.table("predictions").update(
         {
@@ -160,31 +156,28 @@ def update_prediction(
 
 
 def delete_prediction(prediction_id: str, user_id: str, access_token: str | None = None) -> None:
-    """Deletes one history row, scoped to the owning user."""
     client = _client_for(access_token)
     client.table("predictions").delete().eq("id", prediction_id).eq("user_id", user_id).execute()
 
 
 def delete_all_predictions(user_id: str, access_token: str | None = None) -> None:
-    """Deletes every history row belonging to this user."""
     client = _client_for(access_token)
     client.table("predictions").delete().eq("user_id", user_id).execute()
 
 
 def _clean_error(exc: Exception) -> str:
-    """
-    Supabase errors are often verbose/technical. This pulls out a
-    short message safe to show on the login/signup page.
-    """
     message = str(exc)
-    if "already registered" in message.lower():
+    msg = message.lower()
+    if "already registered" in msg:
         return "An account with that email already exists. Try logging in instead."
-    if "invalid login credentials" in message.lower():
-        return "Invalid email or password."
-    if "password" in message.lower() and "short" in message.lower():
+    if "invalid login credentials" in msg or "invalid email or password" in msg:
+        return "Incorrect email or password. Please try again."
+    if "email not confirmed" in msg:
+        return "Please confirm your email before logging in."
+    if "password" in msg and "short" in msg:
         return "Password is too short. Use at least 6 characters."
-    if "banned" in message.lower():
+    if "banned" in msg:
         return "This account has been restricted."
-    if "rate limit" in message.lower():
+    if "rate limit" in msg:
         return "Too many attempts. Please wait a moment and try again."
     return "Something went wrong. Please try again."

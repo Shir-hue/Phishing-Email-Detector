@@ -12,6 +12,17 @@
             <p class="auth-subtitle">Log in to continue.</p>
         </div>
 
+        {# ── Password reset success banner ── #}
+        {% if reset_success %}
+        <div class="auth-flash" role="status"
+            style="background: rgba(46,204,113,.08); border-color: rgba(46,204,113,.3);">
+            <p style="color: #7fe3a8;">
+                ✓ Your password has been updated. Log in with your new password below.
+            </p>
+        </div>
+        {% endif %}
+
+        {# ── Error flash messages ── #}
         {% with messages = get_flashed_messages() %}
         {% if messages %}
         <div class="auth-flash" role="alert">

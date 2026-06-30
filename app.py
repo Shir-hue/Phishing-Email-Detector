@@ -46,42 +46,22 @@ def predict_text(email_text: str) -> Prediction:
             word_count=0,
             char_count=0
         )
-    # Convert text to TF-IDF
     text_tfidf = vectorizer.transform([text])
-    # Prediction
     prediction = model.predict(text_tfidf)[0]
-    # Probability
     probabilities = model.predict_proba(text_tfidf)[0]
     confidence = float(np.max(probabilities))
     label = "Phishing" if prediction == 1 else "Legitimate"
-    # Suspicious terms
     suspicious_terms = [
-        "urgent",
-        "verify",
-        "password",
-        "account",
-        "bank",
-        "click",
-        "login",
-        "security",
-        "suspended",
-        "confirm",
-        "update",
-        "payment"
+        "urgent", "verify", "password", "account", "bank",
+        "click", "login", "security", "suspended", "confirm",
+        "update", "payment"
     ]
-    found_terms = []
-    for term in suspicious_terms:
-        if term in text.lower():
-            found_terms.append(term)
+    found_terms = [t for t in suspicious_terms if t in text.lower()]
     reason = []
     if found_terms:
-        reason.append(
-            f"Suspicious terms detected: {', '.join(found_terms[:5])}"
-        )
+        reason.append(f"Suspicious terms detected: {', '.join(found_terms[:5])}")
     else:
-        reason.append(
-            "No common phishing keywords detected."
-        )
+        reason.append("No common phishing keywords detected.")
     reason.append(f"Model confidence: {confidence:.2%}")
     return Prediction(
         label=label,
@@ -97,12 +77,10 @@ def predict_text(email_text: str) -> Prediction:
 # ---------------------------------------------------------------------------
 
 def current_user() -> Dict[str, Any] | None:
-    """Returns the logged-in user's session info, or None if logged out."""
     return session.get("user")
 
 
 def login_required(view_func):
-    """Decorator for routes that require a logged-in user."""
     @wraps(view_func)
     def wrapped(*args, **kwargs):
         if current_user() is None:
@@ -112,8 +90,6 @@ def login_required(view_func):
     return wrapped
 
 
-# Make `current_user()` available inside every template as `user`,
-# so base.html can show "Log in / Sign up" vs the profile pill.
 @app.context_processor
 def inject_user():
     return {"user": current_user()}
@@ -133,7 +109,6 @@ def predict() -> str:
     email_text = request.form.get("email_text", "")
     pred = predict_text(email_text)
 
-    # Only save to history if someone is actually logged in.
     user = current_user()
     if user is not None and email_text.strip():
         try:
@@ -145,8 +120,6 @@ def predict() -> str:
                 access_token=user.get("access_token"),
             )
         except Exception:
-            # Don't let a history-save failure break the prediction result
-            # the user is waiting on. Could log this to a real logger later.
             pass
 
     return render_template(
@@ -192,7 +165,7 @@ def security_advice() -> str:
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
-        return render_template("login.html")
+        return render_template("login.html", reset_success=request.args.get("reset") == "1")
 
     email = request.form.get("email", "").strip()
     password = request.form.get("password", "")
@@ -237,7 +210,22 @@ def signup():
 
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
-    return render_template("forgot_password.html")
+    if request.method == "GET":
+        return render_template("forgot_password.html")
+
+    email = request.form.get("email", "").strip()
+    if email:
+        try:
+            reset_url = url_for("auth_reset", _external=True)
+            auth.send_password_reset(email, redirect_url=reset_url)
+        except Exception:
+            # Never reveal whether the email exists — always show the same
+            # success screen regardless of what happened internally.
+            app.logger.exception("Password reset failed for %s", email)
+
+    # Always render the "check your inbox" state, even if the email
+    # doesn't exist, to avoid leaking which addresses are registered.
+    return render_template("forgot_password.html", email_sent=True, email=email)
 
 
 @app.get("/logout")
@@ -248,16 +236,51 @@ def logout():
 
 
 # ---------------------------------------------------------------------------
+# Password reset handshake
+# ---------------------------------------------------------------------------
+
+@app.get("/auth/reset")
+def auth_reset():
+    """
+    Supabase redirects here after the user clicks the reset link in
+    their email. The recovery tokens arrive in the URL fragment
+    (#access_token=...&refresh_token=...&type=recovery), which Flask
+    can never see server-side, so this renders a page whose JS reads
+    the fragment and lets the user pick a new password.
+    """
+    return render_template("reset_password.html")
+
+
+@app.post("/auth/reset/finish")
+def auth_reset_finish():
+    """
+    Receives the recovery tokens + new password from the reset page JS,
+    verifies the tokens, and updates the user's password in Supabase.
+    """
+    data = request.get_json(silent=True) or {}
+    access_token = data.get("access_token")
+    refresh_token = data.get("refresh_token")
+    new_password = data.get("password", "").strip()
+
+    if not access_token or not new_password:
+        return jsonify({"ok": False, "error": "Missing required fields."}), 400
+    if len(new_password) < 6:
+        return jsonify({"ok": False, "error": "Password must be at least 6 characters."}), 400
+
+    try:
+        auth.update_password(access_token, refresh_token, new_password)
+    except auth.AuthError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+
+    return jsonify({"ok": True, "redirect": url_for("login", reset="1")})
+
+
+# ---------------------------------------------------------------------------
 # History (JSON API consumed by the modal on index.html)
 # ---------------------------------------------------------------------------
 
 @app.get("/api/history")
 def api_history():
-    """
-    Returns the logged-in user's prediction history as JSON.
-    The History tab modal on the home page calls this via fetch()
-    to decide whether to show the sign-in prompt or the real list.
-    """
     user = current_user()
     if user is None:
         return jsonify({"logged_in": False, "predictions": []})
@@ -273,11 +296,6 @@ def api_history():
 
 @app.post("/api/history/<prediction_id>")
 def api_history_update(prediction_id: str):
-    """
-    Re-runs the model on edited email text and overwrites that one
-    history row. Mirrors what /recalculate does on the results page,
-    but persists the new result instead of just rendering it once.
-    """
     user = current_user()
     if user is None:
         return jsonify({"ok": False, "error": "Not logged in."}), 401
@@ -311,7 +329,6 @@ def api_history_update(prediction_id: str):
 
 @app.delete("/api/history/<prediction_id>")
 def api_history_delete(prediction_id: str):
-    """Deletes a single history entry belonging to the logged-in user."""
     user = current_user()
     if user is None:
         return jsonify({"ok": False, "error": "Not logged in."}), 401
@@ -331,7 +348,6 @@ def api_history_delete(prediction_id: str):
 
 @app.delete("/api/history")
 def api_history_delete_all():
-    """Deletes every history entry belonging to the logged-in user."""
     user = current_user()
     if user is None:
         return jsonify({"ok": False, "error": "Not logged in."}), 401
@@ -346,5 +362,4 @@ def api_history_delete_all():
 
 
 if __name__ == "__main__":
-    # For local development
     app.run(host="127.0.0.1", port=5000, debug=True)
