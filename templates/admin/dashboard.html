@@ -1,0 +1,27 @@
+{% extends "admin/admin_base.html" %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="admin-stat-grid">
+    <div class="admin-stat-card">
+        <span class="admin-stat-label">Total users</span>
+        <span class="admin-stat-value">{{ stats.total_users }}</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-label">Signups today</span>
+        <span class="admin-stat-value">{{ stats.signups_today }}</span>
+    </div>
+    <div class="admin-stat-card">
+        <span class="admin-stat-label">Total analyses</span>
+        <span class="admin-stat-value">{{ stats.total_predictions }}</span>
+    </div>
+</div>
+
+<div class="admin-section-head">
+    <h2 class="admin-section-title">Quick links</h2>
+</div>
+<div class="admin-quicklinks">
+    <a class="admin-quicklink" href="{{ url_for('admin_users') }}">Manage users →</a>
+</div>
+{% endblock %}

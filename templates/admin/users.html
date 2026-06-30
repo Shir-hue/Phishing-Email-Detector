@@ -1,0 +1,147 @@
+{% extends "admin/admin_base.html" %}
+
+{% block page_title %}Users{% endblock %}
+
+{% block content %}
+<div class="admin-section-head">
+    <h2 class="admin-section-title">All users <span class="admin-count-badge">{{ users | length }}</span></h2>
+</div>
+
+{% if users %}
+<div class="admin-table-wrap">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Joined</th>
+                <th>Status</th>
+                <th style="text-align:right; padding-right:55px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr id="user-row-{{ u.id }}" class="{% if u.banned %}is-banned{% endif %}">
+                <td class="admin-td-email">{{ u.email }}</td>
+                <td class="admin-td-date">
+                    {% if u.created_at %}
+                    {{ u.created_at[:10] }}
+                    {% else %}
+                    —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if u.banned %}
+                    <span class="admin-chip admin-chip--red" id="status-{{ u.id }}">Banned</span>
+                    {% else %}
+                    <span class="admin-chip admin-chip--green" id="status-{{ u.id }}">Active</span>
+                    {% endif %}
+                </td>
+                <td class="admin-col-actions">
+                    {% if u.banned %}
+                    <button class="admin-btn admin-btn--secondary" onclick="handleUnban('{{ u.id }}', '{{ u.email }}')">
+                        Unban
+                    </button>
+                    {% else %}
+                    <button class="admin-btn admin-btn--warning" onclick="handleBan('{{ u.id }}', '{{ u.email }}')">
+                        Ban
+                    </button>
+                    {% endif %}
+                    <button class="admin-btn admin-btn--danger" onclick="handleDelete('{{ u.id }}', '{{ u.email }}')">
+                        Delete
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="admin-empty">No users found.</p>
+{% endif %}
+
+<!-- Toast notification -->
+<div class="admin-toast" id="adminToast" aria-live="polite"></div>
+
+<script>
+    (function () {
+
+        function showToast(msg, isError) {
+            const toast = document.getElementById('adminToast');
+            toast.textContent = msg;
+            toast.className = 'admin-toast is-visible' + (isError ? ' is-error' : '');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(function () {
+                toast.classList.remove('is-visible');
+            }, 3500);
+        }
+
+        function apiCall(url, method) {
+            return fetch(url, { method: method, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json(); });
+        }
+
+        window.handleBan = function (userId, email) {
+            if (!confirm('Ban ' + email + '?\n\nThey will no longer be able to log in.')) return;
+            apiCall('/admin/users/' + userId + '/ban', 'POST')
+                .then(function (data) {
+                    if (!data.ok) { showToast(data.error || 'Ban failed.', true); return; }
+                    var row = document.getElementById('user-row-' + userId);
+                    var status = document.getElementById('status-' + userId);
+                    var btn = row.querySelector('.admin-btn--warning');
+                    if (row) row.classList.add('is-banned');
+                    if (status) {
+                        status.textContent = 'Banned';
+                        status.className = 'admin-chip admin-chip--red';
+                    }
+                    if (btn) {
+                        btn.textContent = 'Unban';
+                        btn.className = 'admin-btn admin-btn--secondary';
+                        btn.setAttribute('onclick', 'handleUnban(\'' + userId + '\', \'' + email + '\')');
+                    }
+                    showToast(email + ' has been banned.');
+                })
+                .catch(function () { showToast('Network error. Try again.', true); });
+        };
+
+        window.handleUnban = function (userId, email) {
+            if (!confirm('Unban ' + email + '?\n\nThey will be able to log in again.')) return;
+            apiCall('/admin/users/' + userId + '/unban', 'POST')
+                .then(function (data) {
+                    if (!data.ok) { showToast(data.error || 'Unban failed.', true); return; }
+                    var row = document.getElementById('user-row-' + userId);
+                    var status = document.getElementById('status-' + userId);
+                    var btn = row.querySelector('.admin-btn--secondary');
+                    if (row) row.classList.remove('is-banned');
+                    if (status) {
+                        status.textContent = 'Active';
+                        status.className = 'admin-chip admin-chip--green';
+                    }
+                    if (btn) {
+                        btn.textContent = 'Ban';
+                        btn.className = 'admin-btn admin-btn--warning';
+                        btn.setAttribute('onclick', 'handleBan(\'' + userId + '\', \'' + email + '\')');
+                    }
+                    showToast(email + ' has been unbanned.');
+                })
+                .catch(function () { showToast('Network error. Try again.', true); });
+        };
+
+        window.handleDelete = function (userId, email) {
+            if (!confirm('Permanently delete ' + email + '?\n\nThis cannot be undone.')) return;
+            apiCall('/admin/users/' + userId, 'DELETE')
+                .then(function (data) {
+                    if (!data.ok) { showToast(data.error || 'Delete failed.', true); return; }
+                    var row = document.getElementById('user-row-' + userId);
+                    if (row) {
+                        row.style.transition = 'opacity 0.3s';
+                        row.style.opacity = '0';
+                        setTimeout(function () { row.remove(); }, 300);
+                    }
+                    showToast(email + ' has been deleted.');
+                })
+                .catch(function () { showToast('Network error. Try again.', true); });
+        };
+
+    })();
+</script>
+{% endblock %}

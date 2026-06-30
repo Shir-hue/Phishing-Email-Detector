@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin — Phishing Email Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" />
+</head>
+
+<body class="admin-body">
+
+    <div class="admin-layout">
+
+        <!-- ── Sidebar ── -->
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-brand">
+                <a href="{{ url_for('home') }}" class="admin-brand-link">
+                    <span class="admin-brand-mark" aria-hidden="true">⛨</span>
+                    <span class="admin-brand-text">PED</span>
+                </a>
+                <span class="admin-badge">Admin</span>
+            </div>
+
+            <nav class="admin-nav" aria-label="Admin navigation">
+                <a class="admin-nav-link {% if request.endpoint == 'admin_dashboard' %}is-active{% endif %}"
+                    href="{{ url_for('admin_dashboard') }}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.4" />
+                        <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.4" />
+                        <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.4" />
+                        <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.4" />
+                    </svg>
+                    Dashboard
+                </a>
+                <a class="admin-nav-link {% if request.endpoint == 'admin_users' %}is-active{% endif %}"
+                    href="{{ url_for('admin_users') }}">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.4" />
+                        <path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.4"
+                            stroke-linecap="round" />
+                    </svg>
+                    Users
+                </a>
+            </nav>
+
+            <div class="admin-sidebar-footer">
+                <a href="{{ url_for('home') }}" class="admin-back-link">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                        <path d="M8.5 2.5 3.5 7l5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    Back to app
+                </a>
+                <span class="admin-sidebar-user">{{ user.email }}</span>
+            </div>
+        </aside>
+
+        <!-- ── Main area ── -->
+        <div class="admin-main">
+            <header class="admin-topbar">
+                <h1 class="admin-page-title">{% block page_title %}{% endblock %}</h1>
+            </header>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="admin-flash-list">
+                {% for msg in messages %}
+                <div class="admin-flash">{{ msg }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <div class="admin-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+    </div>
+
+</body>
+
+</html>

@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Dict, Any
 from functools import wraps
+from datetime import datetime, timezone
 
 from flask import (
     Flask, render_template, request, redirect, url_for, session, flash, jsonify
@@ -18,6 +19,15 @@ import auth  # our Supabase wrapper (auth.py)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-fallback-key-change-me")
+
+# Comma-separated list of emails that get access to /admin.
+# Set ADMIN_EMAILS in Render's environment variables — never ever hardcode it here.
+# Example:  ADMIN_EMAILS=you@example.com,partner@example.com
+ADMIN_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get("ADMIN_EMAILS", "").split(",")
+    if e.strip()
+}
 
 
 @dataclass
@@ -80,6 +90,14 @@ def current_user() -> Dict[str, Any] | None:
     return session.get("user")
 
 
+def is_admin(user: Dict[str, Any] | None = None) -> bool:
+    """True if the given user (or the currently logged-in user) is an admin."""
+    user = user if user is not None else current_user()
+    if user is None:
+        return False
+    return user.get("email", "").lower() in ADMIN_EMAILS
+
+
 def login_required(view_func):
     @wraps(view_func)
     def wrapped(*args, **kwargs):
@@ -90,9 +108,27 @@ def login_required(view_func):
     return wrapped
 
 
+def admin_required(view_func):
+    """Decorator for routes that require a logged-in admin."""
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        user = current_user()
+        if user is None:
+            flash("Please log in to view that page.")
+            return redirect(url_for("login"))
+        if not is_admin(user):
+            flash("You don't have access to that page.")
+            return redirect(url_for("home"))
+        return view_func(*args, **kwargs)
+    return wrapped
+
+
+# Makes `user` and `user_is_admin` available in every template automatically.
+# base.html uses user_is_admin to show/hide the "Admin panel" dropdown link.
 @app.context_processor
 def inject_user():
-    return {"user": current_user()}
+    user = current_user()
+    return {"user": user, "user_is_admin": is_admin(user)}
 
 
 # ---------------------------------------------------------------------------
@@ -219,12 +255,8 @@ def forgot_password():
             reset_url = url_for("auth_reset", _external=True)
             auth.send_password_reset(email, redirect_url=reset_url)
         except Exception:
-            # Never reveal whether the email exists — always show the same
-            # success screen regardless of what happened internally.
             app.logger.exception("Password reset failed for %s", email)
 
-    # Always render the "check your inbox" state, even if the email
-    # doesn't exist, to avoid leaking which addresses are registered.
     return render_template("forgot_password.html", email_sent=True, email=email)
 
 
@@ -241,22 +273,11 @@ def logout():
 
 @app.get("/auth/reset")
 def auth_reset():
-    """
-    Supabase redirects here after the user clicks the reset link in
-    their email. The recovery tokens arrive in the URL fragment
-    (#access_token=...&refresh_token=...&type=recovery), which Flask
-    can never see server-side, so this renders a page whose JS reads
-    the fragment and lets the user pick a new password.
-    """
     return render_template("reset_password.html")
 
 
 @app.post("/auth/reset/finish")
 def auth_reset_finish():
-    """
-    Receives the recovery tokens + new password from the reset page JS,
-    verifies the tokens, and updates the user's password in Supabase.
-    """
     data = request.get_json(silent=True) or {}
     access_token = data.get("access_token")
     refresh_token = data.get("refresh_token")
@@ -358,6 +379,83 @@ def api_history_delete_all():
         app.logger.exception("api_history_delete_all failed for user %s", user.get("id"))
         return jsonify({"ok": False, "error": "Could not clear history."}), 500
 
+    return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Admin panel
+# ---------------------------------------------------------------------------
+
+@app.get("/admin")
+@admin_required
+def admin_dashboard():
+    try:
+        users = auth.list_users()
+        total_predictions = auth.total_prediction_count()
+    except auth.AdminError as e:
+        flash(str(e))
+        users = []
+        total_predictions = 0
+
+    today = datetime.now(timezone.utc).date()
+    signups_today = 0
+    for u in users:
+        try:
+            created = datetime.fromisoformat(u["created_at"].replace("Z", "+00:00")).date()
+            if created == today:
+                signups_today += 1
+        except Exception:
+            pass
+
+    stats = {
+        "total_users": len(users),
+        "signups_today": signups_today,
+        "total_predictions": total_predictions,
+    }
+    return render_template("admin/dashboard.html", stats=stats)
+
+
+@app.get("/admin/users")
+@admin_required
+def admin_users():
+    try:
+        users = auth.list_users()
+    except auth.AdminError as e:
+        flash(str(e))
+        users = []
+    return render_template("admin/users.html", users=users)
+
+
+@app.post("/admin/users/<user_id>/ban")
+@admin_required
+def admin_ban_user(user_id: str):
+    try:
+        auth.ban_user(user_id)
+    except auth.AdminError as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    return jsonify({"ok": True})
+
+
+@app.post("/admin/users/<user_id>/unban")
+@admin_required
+def admin_unban_user(user_id: str):
+    try:
+        auth.unban_user(user_id)
+    except auth.AdminError as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    return jsonify({"ok": True})
+
+
+@app.delete("/admin/users/<user_id>")
+@admin_required
+def admin_delete_user(user_id: str):
+    user = current_user()
+    if user and user.get("id") == user_id:
+        return jsonify({"ok": False, "error": "You can't delete your own admin account."}), 400
+    try:
+        auth.delete_user(user_id)
+    except auth.AdminError as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
     return jsonify({"ok": True})
 
 

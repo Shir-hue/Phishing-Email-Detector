@@ -40,6 +40,10 @@
                     </svg>
                 </button>
                 <div class="profile-dropdown" id="profileDropdown" role="menu" aria-hidden="true">
+                    {% if user_is_admin %}
+                    <a class="profile-dropdown-item" href="{{ url_for('admin_dashboard') }}" role="menuitem">Admin
+                        panel</a>
+                    {% endif %}
                     <a class="profile-dropdown-item" href="{{ url_for('logout') }}" role="menuitem">Log out</a>
                 </div>
             </div>
@@ -71,6 +75,9 @@
                 href="{{ url_for('about') }}">About</a>
             <div class="mobile-nav-divider"></div>
             {% if user %}
+            {% if user_is_admin %}
+            <a class="mobile-nav-link" href="{{ url_for('admin_dashboard') }}">Admin panel</a>
+            {% endif %}
             <a class="mobile-nav-link" href="{{ url_for('logout') }}">Log out</a>
             {% else %}
             <a class="mobile-nav-link" href="{{ url_for('login') }}">Log in</a>
