@@ -224,13 +224,5 @@
   margin-top: 6px;
 }
 
-/* ----- Confirm-email / check-your-inbox states -----
-   Used by confirm.html (after clicking the email link) and
-   signup_pending.html (right after signing up). Relies on the
-   .spinner / .spinner-lg classes defined in base.css. */
 
-.confirm-card{ text-align: center; }
-.confirm-state{ display:flex; flex-direction:column; align-items:center; gap: 6px; }
-.confirm-state .spinner-lg{ margin-bottom: 18px; }
-.confirm-title{ margin-bottom: 6px; }
-.confirm-mail-icon{ color: var(--primary); margin-bottom: 18px; }
+

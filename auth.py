@@ -30,9 +30,6 @@ def sign_up(email: str, password: str) -> Dict[str, Any]:
     """
     Creates a new Supabase user with email + password.
     Returns a dict with the user's id/email/access_token on success.
-    If email confirmation is required, access_token will be None -
-    the caller (app.py) is responsible for NOT logging the user in
-    when that happens, and showing a "check your inbox" screen instead.
     Raises AuthError with a human-readable message on failure.
     """
     try:
@@ -43,8 +40,20 @@ def sign_up(email: str, password: str) -> Dict[str, Any]:
     if result.user is None:
         raise AuthError("Sign up failed. Please try again.")
 
-    access_token = result.session.access_token if result.session else None
-    return {"id": result.user.id, "email": result.user.email, "access_token": access_token}
+    if result.session is None:
+        # Email confirmation is enabled in Supabase, so there's no
+        # session yet. Since I decided that we're not using the confirm-email flow anymore, at least for now
+        # treat this as a hard error so it's obvious in testing -
+        raise AuthError(
+            "Account created, but sign-in is not available yet. "
+            "Please contact support."
+        )
+
+    return {
+        "id": result.user.id,
+        "email": result.user.email,
+        "access_token": result.session.access_token,
+    }
 
 
 def sign_in(email: str, password: str) -> Dict[str, Any]:
@@ -76,25 +85,6 @@ def sign_out() -> None:
         # regardless, which is what actually logs the user out of
         # *this app*.
         pass
-
-
-def get_user_from_token(access_token: str) -> Dict[str, Any]:
-    """
-    Verifies an access token (the one Supabase hands back in the
-    confirmation-link URL fragment) and returns the user it belongs
-    to. Used by /auth/finish to turn that token into a real Flask
-    session once a user clicks "Confirm your email."
-    """
-    try:
-        client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-        result = client.auth.get_user(access_token)
-    except Exception as exc:
-        raise AuthError("That confirmation link is invalid or has expired.") from exc
-
-    if result.user is None:
-        raise AuthError("That confirmation link is invalid or has expired.")
-
-    return {"id": result.user.id, "email": result.user.email}
 
 
 def _client_for(access_token: str | None) -> Client:
@@ -193,4 +183,8 @@ def _clean_error(exc: Exception) -> str:
         return "Invalid email or password."
     if "password" in message.lower() and "short" in message.lower():
         return "Password is too short. Use at least 6 characters."
+    if "banned" in message.lower():
+        return "This account has been restricted."
+    if "rate limit" in message.lower():
+        return "Too many attempts. Please wait a moment and try again."
     return "Something went wrong. Please try again."
