@@ -161,8 +161,24 @@
   margin-bottom: 22px;
   letter-spacing: .2px;
   box-shadow: 0 8px 20px rgba(77,163,255,.18);
+  position: relative;
+  transition: filter .15s ease;
 }
 .auth-submit:hover{filter: brightness(1.04);}
+
+/* Loading state — shown while the form is submitting */
+.auth-submit.is-loading{ color: transparent; pointer-events: none; }
+.auth-submit.is-loading::after{
+  content:"";
+  position:absolute;
+  top:50%; left:50%;
+  width:16px; height:16px;
+  margin:-8px 0 0 -8px;
+  border-radius:50%;
+  border:2px solid rgba(4,37,63,.35);
+  border-top-color:#04253f;
+  animation: spin .7s linear infinite;
+}
 
 .auth-divider{display:flex; align-items:center; gap:10px; margin-bottom:18px;}
 .auth-divider .line{height:1px; background: rgba(255,255,255,.06); flex:1;}
@@ -207,3 +223,14 @@
 .auth-flash p + p{
   margin-top: 6px;
 }
+
+/* ----- Confirm-email / check-your-inbox states -----
+   Used by confirm.html (after clicking the email link) and
+   signup_pending.html (right after signing up). Relies on the
+   .spinner / .spinner-lg classes defined in base.css. */
+
+.confirm-card{ text-align: center; }
+.confirm-state{ display:flex; flex-direction:column; align-items:center; gap: 6px; }
+.confirm-state .spinner-lg{ margin-bottom: 18px; }
+.confirm-title{ margin-bottom: 6px; }
+.confirm-mail-icon{ color: var(--primary); margin-bottom: 18px; }

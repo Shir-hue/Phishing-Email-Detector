@@ -22,7 +22,7 @@
         {% endif %}
         {% endwith %}
 
-        <form class="form" action="{{ url_for('login') }}" method="post" aria-label="Log in form">
+        <form class="form" id="loginForm" action="{{ url_for('login') }}" method="post" aria-label="Log in form">
             <div class="auth-field">
                 <label for="loginEmail" class="auth-label">Email</label>
                 <input id="loginEmail" name="email" type="email" placeholder="you@example.com" required
@@ -44,4 +44,10 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.getElementById('loginForm').addEventListener('submit', function () {
+        this.querySelector('.auth-submit').classList.add('is-loading');
+    });
+</script>
 {% endblock %}

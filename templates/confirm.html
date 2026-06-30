@@ -1,0 +1,71 @@
+{% extends "auth_base.html" %}
+{% block content %}
+<div class="auth-shell">
+    <div class="auth-card confirm-card">
+        <div class="auth-brand">
+            <span class="auth-brand-mark" aria-hidden="true">⛨</span>
+            <span class="auth-brand-text">Phishing Email Detector</span>
+        </div>
+        <div class="confirm-state" id="confirmState">
+            <div class="spinner spinner-lg" id="confirmSpinner" aria-hidden="true"></div>
+            <h1 class="auth-title confirm-title" id="confirmTitle">Confirming your email</h1>
+            <p class="auth-subtitle" id="confirmSubtitle">You'll land in shortly...</p>
+        </div>
+        <div class="auth-switch confirm-fallback" id="confirmFallback" style="display:none; margin-top: 18px;">
+            <a href="{{ url_for('login') }}">Back to log in</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var titleEl = document.getElementById('confirmTitle');
+        var subtitleEl = document.getElementById('confirmSubtitle');
+        var spinnerEl = document.getElementById('confirmSpinner');
+        var fallbackEl = document.getElementById('confirmFallback');
+
+        function fail(message) {
+            if (spinnerEl) spinnerEl.style.display = 'none';
+            titleEl.textContent = "Couldn't confirm email";
+            subtitleEl.textContent = message || "That link may be invalid or expired. Please try logging in or signing up again.";
+            fallbackEl.style.display = 'block';
+        }
+
+        var hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '';
+        var params = new URLSearchParams(hash);
+        var accessToken = params.get('access_token');
+        var errorDescription = params.get('error_description');
+
+        if (errorDescription) {
+            fail(decodeURIComponent(errorDescription.replace(/\+/g, ' ')));
+            return;
+        }
+
+        if (!accessToken) {
+            fail();
+            return;
+        }
+
+        fetch('/auth/finish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ access_token: accessToken })
+        })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data.ok) {
+                    titleEl.textContent = "You're confirmed!";
+                    subtitleEl.textContent = "Taking you to your account...";
+                    setTimeout(function () {
+                        window.location.href = data.redirect || '/';
+                    }, 900);
+                } else {
+                    fail(data.error);
+                }
+            })
+            .catch(function () {
+                fail();
+            });
+    })();
+</script>
+{% endblock %}

@@ -225,6 +225,10 @@ def signup():
         flash(str(e))
         return render_template("signup.html"), 400
 
+    if user.get("access_token") is None:
+        # Email confirmation
+        return render_template("signup_pending.html", email=user["email"])
+
     session["user"] = {
         "id": user["id"],
         "email": user["email"],
@@ -246,6 +250,42 @@ def logout():
 
 
 # ---------------------------------------------------------------------------
+# Email confirmation handshake
+# ---------------------------------------------------------------------------
+
+@app.get("/auth/confirm")
+def auth_confirm():
+    """
+    Supabase redirects here after a user clicks the link in their
+    confirmation email. The tokens arrive in the URL fragment
+    (#access_token=...), which Flask can never see server-side - so
+    this just renders a page whose JS reads the fragment and POSTs it
+    to /auth/finish to actually create the session.
+    """
+    return render_template("confirm.html")
+
+
+@app.post("/auth/finish")
+def auth_finish():
+    data = request.get_json(silent=True) or {}
+    access_token = data.get("access_token")
+    if not access_token:
+        return jsonify({"ok": False, "error": "Missing token."}), 400
+
+    try:
+        user = auth.get_user_from_token(access_token)
+    except auth.AuthError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+
+    session["user"] = {
+        "id": user["id"],
+        "email": user["email"],
+        "access_token": access_token,
+    }
+    return jsonify({"ok": True, "redirect": url_for("home")})
+
+
+# ---------------------------------------------------------------------------
 # History (JSON API consumed by the modal on index.html)
 # ---------------------------------------------------------------------------
 
@@ -262,7 +302,7 @@ def api_history():
 
     try:
         rows = auth.get_history(user["id"], access_token=user.get("access_token"))
-    except Exception as exc:
+    except Exception:
         app.logger.exception("api_history failed for user %s", user.get("id"))
         return jsonify({"logged_in": True, "predictions": [], "error": True})
 

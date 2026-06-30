@@ -30,6 +30,9 @@ def sign_up(email: str, password: str) -> Dict[str, Any]:
     """
     Creates a new Supabase user with email + password.
     Returns a dict with the user's id/email/access_token on success.
+    If email confirmation is required, access_token will be None -
+    the caller (app.py) is responsible for NOT logging the user in
+    when that happens, and showing a "check your inbox" screen instead.
     Raises AuthError with a human-readable message on failure.
     """
     try:
@@ -73,6 +76,25 @@ def sign_out() -> None:
         # regardless, which is what actually logs the user out of
         # *this app*.
         pass
+
+
+def get_user_from_token(access_token: str) -> Dict[str, Any]:
+    """
+    Verifies an access token (the one Supabase hands back in the
+    confirmation-link URL fragment) and returns the user it belongs
+    to. Used by /auth/finish to turn that token into a real Flask
+    session once a user clicks "Confirm your email."
+    """
+    try:
+        client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        result = client.auth.get_user(access_token)
+    except Exception as exc:
+        raise AuthError("That confirmation link is invalid or has expired.") from exc
+
+    if result.user is None:
+        raise AuthError("That confirmation link is invalid or has expired.")
+
+    return {"id": result.user.id, "email": result.user.email}
 
 
 def _client_for(access_token: str | None) -> Client:

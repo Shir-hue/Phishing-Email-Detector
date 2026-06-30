@@ -214,3 +214,31 @@ textarea:focus{border-color: rgba(77,163,255,.7); box-shadow: 0 0 0 3px rgba(77,
     gap: 10px;
   }
 }
+
+/* ============================================================
+   Loading spinner + logout transition overlay
+   (used by base.html, confirm.html, signup_pending.html, and
+   the login/signup button loading state in auth.css)
+   ============================================================ */
+
+.spinner{
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.18);
+  border-top-color: var(--primary);
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+.spinner-lg{ width: 34px; height: 34px; border-width: 3px; margin-bottom: 4px; }
+@keyframes spin{ to{ transform: rotate(360deg); } }
+
+.page-transition-overlay{
+  position: fixed; inset: 0;
+  background: rgba(7,11,20,.92);
+  display:flex; align-items:center; justify-content:center;
+  z-index: 999;
+  opacity:0; pointer-events:none;
+  transition: opacity .15s ease;
+}
+.page-transition-overlay.is-active{ opacity:1; pointer-events:all; }
+.page-transition-content{ display:flex; align-items:center; gap:10px; color: var(--text); font-weight:700; font-size:14px; }
