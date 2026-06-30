@@ -28,10 +28,27 @@
                     href="{{ url_for('about') }}">About</a>
             </nav>
 
+            {% if user %}
+            <div class="auth-links profile-menu" id="profileMenu">
+                <button type="button" class="profile-trigger" id="profileTriggerBtn" aria-haspopup="true"
+                    aria-expanded="false" aria-controls="profileDropdown">
+                    <span class="profile-avatar" aria-hidden="true">{{ user.email[0] | upper }}</span>
+                    <span class="profile-name">{{ user.email.split('@')[0] }}</span>
+                    <svg class="profile-chevron" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
+                        <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                            stroke-linejoin="round" fill="none" />
+                    </svg>
+                </button>
+                <div class="profile-dropdown" id="profileDropdown" role="menu" aria-hidden="true">
+                    <a class="profile-dropdown-item" href="{{ url_for('logout') }}" role="menuitem">Log out</a>
+                </div>
+            </div>
+            {% else %}
             <div class="auth-links">
                 <a class="header-login-btn" href="{{ url_for('login') }}">Log in</a>
                 <a class="header-signup-btn" href="{{ url_for('signup') }}">Sign up</a>
             </div>
+            {% endif %}
 
             <button type="button" class="menu-toggle" id="menuToggleBtn" aria-label="Open menu" aria-expanded="false"
                 aria-controls="mobileNavDrawer">
@@ -53,8 +70,12 @@
             <a class="mobile-nav-link{% if request.endpoint == 'about' %} is-active{% endif %}"
                 href="{{ url_for('about') }}">About</a>
             <div class="mobile-nav-divider"></div>
+            {% if user %}
+            <a class="mobile-nav-link" href="{{ url_for('logout') }}">Log out</a>
+            {% else %}
             <a class="mobile-nav-link" href="{{ url_for('login') }}">Log in</a>
             <a class="btn-primary mobile-nav-cta" href="{{ url_for('signup') }}">Sign up</a>
+            {% endif %}
         </nav>
     </div>
 
@@ -91,6 +112,39 @@
                 }
             });
         })();
+
+        // ===== Profile dropdown (only present when logged in) =====
+        (function () {
+            const menu = document.getElementById('profileMenu');
+            if (!menu) return;
+            const trigger = document.getElementById('profileTriggerBtn');
+            const dropdown = document.getElementById('profileDropdown');
+
+            function closeDropdown() {
+                dropdown.setAttribute('aria-hidden', 'true');
+                trigger.setAttribute('aria-expanded', 'false');
+            }
+            function toggleDropdown() {
+                const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+                if (isOpen) {
+                    closeDropdown();
+                } else {
+                    dropdown.setAttribute('aria-hidden', 'false');
+                    trigger.setAttribute('aria-expanded', 'true');
+                }
+            }
+
+            trigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+                toggleDropdown();
+            });
+            document.addEventListener('click', function (e) {
+                if (!menu.contains(e.target)) closeDropdown();
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeDropdown();
+            });
+        })();
     </script>
 
     <main class="page">
@@ -120,8 +174,12 @@
 
                 <div class="footer-col">
                     <div class="footer-col-label">Account</div>
+                    {% if user %}
+                    <a class="footer-link" href="{{ url_for('logout') }}">Log out</a>
+                    {% else %}
                     <a class="footer-link" href="{{ url_for('login') }}">Log in</a>
                     <a class="footer-link" href="{{ url_for('signup') }}">Sign up</a>
+                    {% endif %}
                 </div>
             </div>
 

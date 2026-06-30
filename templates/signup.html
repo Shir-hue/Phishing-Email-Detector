@@ -1,7 +1,5 @@
 {% extends "auth_base.html" %}
-
 {% block title %}Sign up{% endblock %}
-
 {% block content %}
 <div class="auth-shell">
     <div class="auth-card">
@@ -9,11 +7,20 @@
             <span class="auth-brand-mark" aria-hidden="true">⛨</span>
             <span class="auth-brand-text">Phishing Email Detector</span>
         </div>
-
         <div class="auth-header">
             <h1 class="auth-title">Create your account</h1>
             <p class="auth-subtitle">Sign up to get started.</p>
         </div>
+
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="auth-flash" role="alert">
+            {% for message in messages %}
+            <p>{{ message }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
 
         <form class="form" action="{{ url_for('signup') }}" method="post" aria-label="Sign up form">
             <div class="auth-field">
@@ -21,24 +28,13 @@
                 <input id="signupEmail" name="email" type="email" placeholder="you@example.com" required
                     autocomplete="email" />
             </div>
-
             <div class="auth-field">
                 <label for="signupPassword" class="auth-label">Password</label>
                 <input id="signupPassword" name="password" type="password" placeholder="Create a password" required
-                    autocomplete="new-password" />
+                    autocomplete="new-password" minlength="6" />
             </div>
-
             <button type="submit" class="auth-submit">Sign up</button>
-
-            <div class="auth-divider">
-                <span class="line"></span>
-                <span class="auth-divider-label">OR</span>
-                <span class="line"></span>
-            </div>
-
-            <button type="button" class="auth-google-btn" id="googleSignInBtn">Continue with Google</button>
         </form>
-
         <div class="auth-switch">
             <span>Already have an account?</span>
             <a href="{{ url_for('login') }}">Log in</a>

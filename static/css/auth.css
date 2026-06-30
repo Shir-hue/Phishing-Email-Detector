@@ -188,3 +188,22 @@
 @media (max-width: 480px){
   .auth-shell{padding: 28px 20px 48px;}
 }
+
+/* ----- Flash messages (login/signup errors) -----*/
+
+.auth-flash{
+  background: rgba(255, 86, 86, .08);
+  border: 1px solid rgba(255, 86, 86, .25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+}
+.auth-flash p{
+  color: #ff8a8a;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+.auth-flash p + p{
+  margin-top: 6px;
+}

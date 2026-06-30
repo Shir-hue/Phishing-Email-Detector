@@ -27,18 +27,14 @@
             t.classList.add('is-exit');
         }
 
-        // After the exit animation finishes, collapse it out of the page flow
-        // so it doesn't leave an empty gap above the content.
         t.addEventListener('animationend', function (e) {
             if (t.classList.contains('is-exit')) {
                 t.style.display = 'none';
             }
         });
 
-        // Show for 5 seconds, then play outro.
         var timer = setTimeout(dismiss, 5000);
 
-        // Dismiss right away
         var closeBtn = document.getElementById('falsePositiveToastCloseBtn');
         if (closeBtn) {
             closeBtn.addEventListener('click', function () {
@@ -139,12 +135,11 @@
         const closeBtn = document.getElementById('closeEmailModalBtn');
         const textarea = document.getElementById('email_text');
 
-        // Discard edits if user closes without saving: always reset to original page value on open/close.
         const originalEmailText = textarea ? textarea.value : '';
 
         function openModal() {
             if (!overlay || !panel || !textarea) return;
-            textarea.value = originalEmailText; // discard any previous unsaved edits
+            textarea.value = originalEmailText;
             overlay.setAttribute('aria-hidden', 'false');
             overlay.classList.add('is-open');
             setTimeout(() => textarea.focus(), 0);
@@ -152,7 +147,7 @@
 
         function closeModal() {
             if (!overlay || !panel || !textarea) return;
-            textarea.value = originalEmailText; // discard edits when closing without saving
+            textarea.value = originalEmailText;
             overlay.setAttribute('aria-hidden', 'true');
             overlay.classList.remove('is-open');
         }
@@ -168,7 +163,7 @@
 
         if (overlay) {
             overlay.addEventListener('click', function (e) {
-                if (e.target === overlay) closeModal(); // outside click
+                if (e.target === overlay) closeModal();
             });
         }
 

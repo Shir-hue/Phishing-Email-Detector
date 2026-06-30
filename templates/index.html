@@ -55,7 +55,9 @@
     <div id="historyModalPanel" class="modal-panel history-modal-panel" role="dialog" aria-modal="true"
         aria-labelledby="historyModalTitle">
         <button type="button" id="closeHistoryModalBtn" class="history-modal-x" aria-label="Close">&times;</button>
-        <div class="history-empty">
+
+        <!-- Logged-out state: sign-in prompt (default, shown until JS decides otherwise) -->
+        <div class="history-empty" id="historySignedOutView">
             <span class="history-empty-mark" aria-hidden="true">⛨</span>
             <h2 id="historyModalTitle" class="history-empty-title">Sign in to view your history</h2>
             <p class="history-empty-text">
@@ -67,6 +69,52 @@
                 <a class="btn" href="{{ url_for('signup') }}">Sign up</a>
             </div>
         </div>
+
+        <!-- Logged-in, loading state -->
+        <div class="history-loading" id="historyLoadingView" style="display:none;">
+            <p class="history-loading-text">Loading your history&hellip;</p>
+        </div>
+
+        <!-- Logged-in, has predictions -->
+        <div class="history-list-wrap" id="historyListView" style="display:none;">
+            <div class="history-modal-head">
+                <div>
+                    <h2 class="history-modal-title">Your history</h2>
+                    <p class="history-modal-subtitle">Every email you've analyzed while logged in, newest first.</p>
+                </div>
+                <button type="button" class="history-clear-all-btn" id="clearAllHistoryBtn">Delete all</button>
+            </div>
+            <div class="history-list" id="historyListContainer"></div>
+        </div>
+
+        <!-- Logged-in, zero predictions yet -->
+        <div class="history-empty" id="historyEmptyLoggedInView" style="display:none;">
+            <span class="history-empty-mark" aria-hidden="true">⛨</span>
+            <h2 class="history-empty-title">No history yet</h2>
+            <p class="history-empty-text">
+                Analyze an email above while logged in, and it'll show up here.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Edit-history-entry modal (mirrors the "Edit email" modal on results.html) -->
+<div id="historyEditModalOverlay" class="modal-overlay" aria-hidden="true">
+    <div id="historyEditModalPanel" class="modal-panel" role="dialog" aria-modal="true"
+        aria-labelledby="historyEditModalTitle">
+        <div class="modal-header">
+            <h2 id="historyEditModalTitle" class="result-title" style="margin:0;">Edit email</h2>
+        </div>
+
+        <form id="historyEditForm">
+            <label for="historyEditTextarea" class="label" style="margin-top:12px;">Email text</label>
+            <textarea id="historyEditTextarea" name="email_text" rows="12" required></textarea>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn primary" id="historyEditSubmitBtn">Update results</button>
+                <button type="button" id="closeHistoryEditModalBtn" class="btn" aria-label="Exit">Exit</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -78,10 +126,150 @@
         const panel = document.getElementById('historyModalPanel');
         const closeBtn = document.getElementById('closeHistoryModalBtn');
 
+        const signedOutView = document.getElementById('historySignedOutView');
+        const loadingView = document.getElementById('historyLoadingView');
+        const listView = document.getElementById('historyListView');
+        const listContainer = document.getElementById('historyListContainer');
+        const emptyLoggedInView = document.getElementById('historyEmptyLoggedInView');
+        const clearAllBtn = document.getElementById('clearAllHistoryBtn');
+
+        const editOverlay = document.getElementById('historyEditModalOverlay');
+        const editPanel = document.getElementById('historyEditModalPanel');
+        const editForm = document.getElementById('historyEditForm');
+        const editTextarea = document.getElementById('historyEditTextarea');
+        const closeEditBtn = document.getElementById('closeHistoryEditModalBtn');
+
+        let currentlyEditingId = null;
+        let latestPredictions = [];
+
+        function hideAllHistoryViews() {
+            [signedOutView, loadingView, listView, emptyLoggedInView].forEach(function (el) {
+                if (el) el.style.display = 'none';
+            });
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function formatDate(iso) {
+            try {
+                const d = new Date(iso);
+                return d.toLocaleString(undefined, {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch (e) {
+                return iso;
+            }
+        }
+
+        // Submit a hidden form to POST email_text to /recalculate and go to results
+        function goToResults(emailText) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/recalculate';
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'email_text';
+            input.value = emailText;
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        function rowHtml(item) {
+            const isPhishing = item.label === 'Phishing';
+            const badgeClass = isPhishing ? 'history-badge-phishing' : 'history-badge-legit';
+            const confidencePct = (item.confidence * 100).toFixed(1);
+            const preview = item.email_text.length > 220
+                ? item.email_text.slice(0, 220) + '…'
+                : item.email_text;
+            return (
+                '<div class="history-row" data-id="' + escapeHtml(item.id) + '">' +
+                '<div class="history-row-actions">' +
+                // Eye / view button
+                '<button type="button" class="history-icon-btn is-view" aria-label="View results" title="View results">' +
+                '<svg width="14" height="14" viewBox="0 0 16 16" fill="none">' +
+                '<path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>' +
+                '<circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2"/>' +
+                '</svg>' +
+                '</button>' +
+                // Edit button
+                '<button type="button" class="history-icon-btn is-edit" aria-label="Edit" title="Edit">' +
+                '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.3 2.3a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1 0 1.4l-7.6 7.6-3 .7.7-3 7.5-7.7Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>' +
+                '</button>' +
+                // Delete button
+                '<button type="button" class="history-icon-btn is-delete" aria-label="Delete" title="Delete">' +
+                '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1.5M4.5 4.5l.6 8.2a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+                '</button>' +
+                '</div>' +
+                '<div class="history-row-top">' +
+                '<span class="history-badge ' + badgeClass + '">' + escapeHtml(item.label) + '</span>' +
+                '<span class="history-confidence">' + confidencePct + '% confidence</span>' +
+                '<span class="history-date">' + escapeHtml(formatDate(item.created_at)) + '</span>' +
+                '</div>' +
+                '<p class="history-row-text">' + escapeHtml(preview) + '</p>' +
+                '</div>'
+            );
+        }
+
+        function renderHistory(predictions) {
+            latestPredictions = predictions;
+            listContainer.innerHTML = predictions.map(rowHtml).join('');
+        }
+
+        function showLoggedInState(predictions) {
+            hideAllHistoryViews();
+            if (!predictions || predictions.length === 0) {
+                emptyLoggedInView.style.display = '';
+                return;
+            }
+            renderHistory(predictions);
+            listView.style.display = '';
+        }
+
+        function loadHistory() {
+            hideAllHistoryViews();
+            loadingView.style.display = '';
+
+            fetch('{{ url_for("api_history") }}', {
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            })
+                .then(function (res) {
+                    if (!res.ok) throw new Error('Request failed with status ' + res.status);
+                    return res.json();
+                })
+                .then(function (data) {
+                    hideAllHistoryViews();
+                    if (!data.logged_in) {
+                        signedOutView.style.display = '';
+                        return;
+                    }
+                    if (data.error) {
+                        loadingView.style.display = '';
+                        loadingView.querySelector('.history-loading-text').textContent =
+                            'Could not load history (server error).';
+                        return;
+                    }
+                    showLoggedInState(data.predictions || []);
+                })
+                .catch(function (err) {
+                    hideAllHistoryViews();
+                    loadingView.style.display = '';
+                    loadingView.querySelector('.history-loading-text').textContent =
+                        'Could not reach the server (' + err.message + ').';
+                });
+        }
+
         function openHistoryModal() {
             if (!overlay || !panel) return;
             overlay.setAttribute('aria-hidden', 'false');
             overlay.classList.add('is-open');
+            loadHistory();
             setTimeout(() => closeBtn && closeBtn.focus(), 0);
         }
 
@@ -89,7 +277,6 @@
             if (!overlay || !panel) return;
             overlay.setAttribute('aria-hidden', 'true');
             overlay.classList.remove('is-open');
-            // Keep Text Analyzer tab visually selected since History has no inline panel.
             if (tabText) tabText.setAttribute('aria-selected', 'true');
             if (tabHistory) tabHistory.setAttribute('aria-selected', 'false');
         }
@@ -106,17 +293,131 @@
         });
 
         if (closeBtn) closeBtn.addEventListener('click', closeHistoryModal);
-
-        if (overlay) {
-            overlay.addEventListener('click', function (e) {
-                if (e.target === overlay) closeHistoryModal();
-            });
-        }
-
+        if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeHistoryModal(); });
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open')) {
+            if (e.key === 'Escape' && overlay && overlay.classList.contains('is-open') &&
+                editOverlay && !editOverlay.classList.contains('is-open')) {
                 closeHistoryModal();
             }
+        });
+
+        // ===== Edit sub-modal =====
+        function openEditModal(id) {
+            const item = latestPredictions.find(function (p) { return String(p.id) === String(id); });
+            if (!item) return;
+            currentlyEditingId = id;
+            editTextarea.value = item.email_text;
+            editOverlay.setAttribute('aria-hidden', 'false');
+            editOverlay.classList.add('is-open');
+            setTimeout(() => editTextarea.focus(), 0);
+        }
+
+        function closeEditModal() {
+            editOverlay.setAttribute('aria-hidden', 'true');
+            editOverlay.classList.remove('is-open');
+            currentlyEditingId = null;
+        }
+
+        if (closeEditBtn) closeEditBtn.addEventListener('click', closeEditModal);
+        if (editOverlay) editOverlay.addEventListener('click', function (e) { if (e.target === editOverlay) closeEditModal(); });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && editOverlay && editOverlay.classList.contains('is-open')) {
+                closeEditModal();
+            }
+        });
+
+        if (editForm) editForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!currentlyEditingId) return;
+            const submitBtn = document.getElementById('historyEditSubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Updating…';
+
+            const body = new URLSearchParams();
+            body.set('email_text', editTextarea.value);
+
+            fetch('/api/history/' + encodeURIComponent(currentlyEditingId), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+                credentials: 'same-origin',
+                body: body.toString()
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Update results';
+                    if (!data.ok) {
+                        alert(data.error || 'Could not update that entry.');
+                        return;
+                    }
+                    // Save succeeded — go to results page with the updated email text
+                    goToResults(editTextarea.value);
+                })
+                .catch(function () {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Update results';
+                    alert('Could not reach the server.');
+                });
+        });
+
+        // ===== Per-row edit / delete / view (event delegation) =====
+        listContainer.addEventListener('click', function (e) {
+            const row = e.target.closest('.history-row');
+            if (!row) return;
+            const id = row.getAttribute('data-id');
+
+            if (e.target.closest('.is-view')) {
+                const item = latestPredictions.find(function (p) { return String(p.id) === String(id); });
+                if (!item) return;
+                goToResults(item.email_text);
+                return;
+            }
+
+            if (e.target.closest('.is-edit')) {
+                openEditModal(id);
+                return;
+            }
+
+            if (e.target.closest('.is-delete')) {
+                if (!confirm('Delete this history entry? This cannot be undone.')) return;
+                fetch('/api/history/' + encodeURIComponent(id), {
+                    method: 'DELETE',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                })
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        if (!data.ok) {
+                            alert(data.error || 'Could not delete that entry.');
+                            return;
+                        }
+                        loadHistory();
+                    })
+                    .catch(function () {
+                        alert('Could not reach the server.');
+                    });
+            }
+        });
+
+        // ===== Delete all =====
+        if (clearAllBtn) clearAllBtn.addEventListener('click', function () {
+            if (!confirm('Delete ALL history entries? This cannot be undone.')) return;
+            fetch('/api/history', {
+                method: 'DELETE',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (!data.ok) {
+                        alert(data.error || 'Could not clear history.');
+                        return;
+                    }
+                    loadHistory();
+                })
+                .catch(function () {
+                    alert('Could not reach the server.');
+                });
         });
 
         // ===== Word / character counter =====

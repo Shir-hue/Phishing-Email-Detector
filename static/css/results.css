@@ -196,7 +196,6 @@
 
 @media (max-width: 520px){
   textarea{min-height: 180px}
-
   .toast{
     top: auto;
     bottom: 18px;
@@ -208,4 +207,238 @@
 
 @media (max-width: 760px){
   .grid{ gap: 12px; }
+}
+
+/* ----- History list ----- */
+
+.history-list{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.history-row{
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,.02);
+}
+
+.history-row-top{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.history-badge{
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.history-badge-phishing{
+  background: rgba(255, 86, 86, .12);
+  color: #ff8a8a;
+  border: 1px solid rgba(255, 86, 86, .3);
+}
+.history-badge-legit{
+  background: rgba(86, 255, 150, .10);
+  color: #7fe3a8;
+  border: 1px solid rgba(86, 255, 150, .25);
+}
+
+.history-confidence{
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.history-date{
+  margin-left: auto;
+  color: #5b6a8a;
+  font-size: 12px;
+}
+
+.history-row-text{
+  color: var(--text);
+  font-size: 13.5px;
+  margin: 0;
+  line-height: 1.5;
+  opacity: .85;
+}
+
+/* ----- History modal ----- */
+
+.history-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-right: 54px;
+}
+
+.history-modal-title {
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0 0 4px;
+}
+
+.history-modal-subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0;
+}
+
+/* FIX: Delete all sits beside X, both absolute top-right */
+.history-clear-all-btn {
+    position: absolute;
+    top: 14px;
+    right: 52px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 86, 86, .3);
+    background: rgba(255, 86, 86, .08);
+    color: #ff8a8a;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.history-clear-all-btn:hover {
+    background: rgba(255, 86, 86, .14);
+}
+
+.history-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+}
+
+.history-loading-text {
+    color: var(--muted);
+    font-size: 13.5px;
+    font-weight: 600;
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.history-row {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    padding-right: 114px;
+    background: rgba(255, 255, 255, .02);
+}
+
+.history-row-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.history-badge {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.history-badge-phishing {
+    background: rgba(255, 86, 86, .12);
+    color: #ff8a8a;
+    border: 1px solid rgba(255, 86, 86, .3);
+}
+
+.history-badge-legit {
+    background: rgba(86, 255, 150, .10);
+    color: #7fe3a8;
+    border: 1px solid rgba(86, 255, 150, .25);
+}
+
+.history-confidence {
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.history-date {
+    color: #5b6a8a;
+    font-size: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* FIX: prevent long unbroken text from stretching the card */
+.history-row-text {
+    color: var(--text);
+    font-size: 13.5px;
+    margin: 0;
+    line-height: 1.5;
+    opacity: .85;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+
+.history-row-actions {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    display: flex;
+    gap: 6px;
+}
+
+.history-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .02);
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.history-icon-btn:hover {
+    color: var(--text);
+    border-color: rgba(255, 255, 255, .2);
+}
+
+.history-icon-btn.is-view {
+    color: #4da3ff;
+    border-color: rgba(77, 163, 255, .3);
+    background: rgba(77, 163, 255, .06);
+}
+
+.history-icon-btn.is-view:hover {
+    background: rgba(77, 163, 255, .14);
+    border-color: rgba(77, 163, 255, .5);
+}
+
+.history-icon-btn.is-delete:hover {
+    color: #ff8a8a;
+    border-color: rgba(255, 86, 86, .35);
+    background: rgba(255, 86, 86, .08);
 }
