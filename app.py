@@ -200,6 +200,7 @@ def login():
     try:
         user = auth.sign_in(email, password)
     except auth.AuthError as e:
+        app.logger.exception("Login failed for %s", email)
         flash(str(e))
         return render_template("login.html"), 400
 
@@ -222,11 +223,12 @@ def signup():
     try:
         user = auth.sign_up(email, password)
     except auth.AuthError as e:
+        app.logger.exception("Signup failed for %s", email)
         flash(str(e))
         return render_template("signup.html"), 400
 
     if user.get("access_token") is None:
-        # Email confirmation
+        # Email confirmation is required before account is usable.
         return render_template("signup_pending.html", email=user["email"])
 
     session["user"] = {
