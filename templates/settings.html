@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings — Phishing Email Detector</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}" />
+    <style>
+        /* Settings-specific overrides on top of auth card styles */
+        .settings-wrap {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .settings-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #6b7280;
+            text-decoration: none;
+            font-size: 13px;
+            margin-bottom: 28px;
+            transition: color 0.15s;
+        }
+
+        .settings-back:hover {
+            color: #c9cdd6;
+        }
+
+        .settings-page-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #e0e4ed;
+            margin: 0 0 4px;
+        }
+
+        .settings-page-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+            margin: 0 0 28px;
+        }
+
+        .settings-card {
+            background: #10131a;
+            border: 1px solid #1e2330;
+            border-radius: 14px;
+            padding: 22px 24px;
+            margin-bottom: 16px;
+        }
+
+        .settings-card--danger {
+            border-color: #7f1d1d;
+            background: #0f0808;
+        }
+
+        .settings-card-head {
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #1e2330;
+        }
+
+        .settings-card--danger .settings-card-head {
+            border-bottom-color: #3d1010;
+        }
+
+        .settings-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e0e4ed;
+            margin: 0 0 3px;
+        }
+
+        .settings-card-title--danger {
+            color: #f87171;
+        }
+
+        .settings-card-desc {
+            font-size: 12px;
+            color: #4b5563;
+            margin: 0;
+        }
+
+        .settings-field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 16px;
+        }
+
+        .settings-field-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #9aa0ad;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .settings-field-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .settings-input {
+            flex: 1;
+            background: #0d1117;
+            border: 1px solid #1e2330;
+            border-radius: 8px;
+            padding: 9px 13px;
+            font-size: 14px;
+            color: #e0e4ed;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        .settings-input:focus {
+            border-color: #2563eb;
+        }
+
+        .settings-hint {
+            font-size: 12px;
+            color: #374151;
+        }
+
+        .settings-static-value {
+            font-size: 14px;
+            color: #4b5563;
+            padding: 2px 0;
+        }
+
+        .settings-feedback {
+            font-size: 12px;
+            font-weight: 500;
+            min-height: 16px;
+        }
+
+        .settings-feedback.is-success {
+            color: #4ade80;
+        }
+
+        .settings-feedback.is-error {
+            color: #f87171;
+        }
+
+        .settings-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 9px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            white-space: nowrap;
+        }
+
+        .settings-btn--primary {
+            background: #1d3a7a;
+            color: #93c5fd;
+            border-color: #2563eb;
+        }
+
+        .settings-btn--primary:hover {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        .settings-btn--danger {
+            background: #1a0a0a;
+            color: #f87171;
+            border-color: #7f1d1d;
+        }
+
+        .settings-btn--danger:hover {
+            background: #2d0f0f;
+            border-color: #991b1b;
+        }
+
+        .settings-danger-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .settings-danger-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e0e4ed;
+            margin: 0 0 3px;
+        }
+
+        .settings-danger-desc {
+            font-size: 12px;
+            color: #6b7280;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="auth-page">
+        <div class="settings-wrap">
+
+            <a href="{{ url_for('home') }}" class="settings-back">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M8.5 2.5 3.5 7l5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+                Back to app
+            </a>
+
+            <h1 class="settings-page-title">Settings</h1>
+            <p class="settings-page-subtitle">Manage your account preferences.</p>
+
+            <!-- ── Profile ── -->
+            <div class="settings-card">
+                <div class="settings-card-head">
+                    <h2 class="settings-card-title">Profile</h2>
+                    <p class="settings-card-desc">Set a display name shown in the header instead of your email.</p>
+                </div>
+
+                <div class="settings-field-group">
+                    <label class="settings-label" for="usernameInput">Display name</label>
+                    <div class="settings-field-row">
+                        <input id="usernameInput" class="settings-input" type="text" maxlength="32"
+                            placeholder="Choose a display name" value="{{ user.username or '' }}" autocomplete="off" />
+                        <button class="settings-btn settings-btn--primary" id="saveUsernameBtn"
+                            onclick="saveUsername()">
+                            Save
+                        </button>
+                    </div>
+                    <span class="settings-hint">Max 32 characters.</span>
+                    <span class="settings-feedback" id="usernameFeedback"></span>
+                </div>
+
+                <div class="settings-field-group">
+                    <label class="settings-label">Email address</label>
+                    <p class="settings-static-value">{{ user.email }}</p>
+                    <span class="settings-hint">Email cannot be changed here.</span>
+                </div>
+            </div>
+
+            <!-- ── Danger zone ── -->
+            <div class="settings-card settings-card--danger">
+                <div class="settings-card-head">
+                    <h2 class="settings-card-title settings-card-title--danger">Danger zone</h2>
+                    <p class="settings-card-desc">These actions are permanent and cannot be undone.</p>
+                </div>
+
+                <div class="settings-danger-row">
+                    <div>
+                        <p class="settings-danger-label">Delete account</p>
+                        <p class="settings-danger-desc">Removes your account and all history permanently.</p>
+                    </div>
+                    <button class="settings-btn settings-btn--danger" onclick="deleteAccount()">
+                        Delete account
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        (function () {
+
+            function feedback(msg, type) {
+                var el = document.getElementById('usernameFeedback');
+                el.textContent = msg;
+                el.className = 'settings-feedback ' + (type === 'ok' ? 'is-success' : 'is-error');
+                clearTimeout(el._t);
+                el._t = setTimeout(function () {
+                    el.textContent = '';
+                    el.className = 'settings-feedback';
+                }, 4000);
+            }
+
+            window.saveUsername = function () {
+                var input = document.getElementById('usernameInput');
+                var btn = document.getElementById('saveUsernameBtn');
+                var username = input.value.trim();
+
+                if (!username) { feedback('Please enter a display name.', 'err'); return; }
+
+                btn.disabled = true;
+                btn.textContent = 'Saving…';
+
+                fetch('/api/settings/username', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: username })
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        btn.disabled = false;
+                        btn.textContent = 'Save';
+                        if (data.ok) {
+                            feedback('Display name updated!', 'ok');
+                            setTimeout(function () { location.reload(); }, 800);
+                        } else {
+                            feedback(data.error || 'Something went wrong.', 'err');
+                        }
+                    })
+                    .catch(function () {
+                        btn.disabled = false;
+                        btn.textContent = 'Save';
+                        feedback('Network error. Try again.', 'err');
+                    });
+            };
+
+            window.deleteAccount = function () {
+                if (!confirm(
+                    'Are you sure you want to delete your account?\n\n' +
+                    'This will permanently remove your account and all your history. ' +
+                    'This cannot be undone.'
+                )) return;
+
+                if (!confirm('Last chance — this is permanent. Delete anyway?')) return;
+
+                fetch('/api/settings/account', { method: 'DELETE' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.ok) {
+                            window.location.href = data.redirect || '/';
+                        } else {
+                            alert(data.error || 'Could not delete account. Please try again.');
+                        }
+                    })
+                    .catch(function () {
+                        alert('Network error. Please try again.');
+                    });
+            };
+
+            document.getElementById('usernameInput').addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') saveUsername();
+            });
+
+        })();
+    </script>
+
+</body>
+
+</html>

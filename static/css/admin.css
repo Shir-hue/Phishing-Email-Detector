@@ -85,22 +85,27 @@
     text-decoration: none;
     font-size: 14px;
     font-weight: 500;
-    transition: background 0.15s, color 0.15s;
+    transition: color 0.15s;
 }
 
 .admin-nav-link:hover {
-    background: #1a1f2e;
+    background: transparent;
     color: #c9cdd6;
 }
 
 .admin-nav-link.is-active {
-    background: #1a2744;
-    color: #60a5fa;
+    background: transparent;
+    color: #e0e4ed;
+    font-weight: 600;
 }
 
 .admin-nav-link svg {
     flex-shrink: 0;
-    opacity: 0.6;
+    opacity: 0.5;
+}
+
+.admin-nav-link:hover svg {
+    opacity: 0.8;
 }
 
 .admin-nav-link.is-active svg {
@@ -447,5 +452,35 @@
 .admin-toast.is-error {
     background: #2d0a0a;
     border-color: #7f1d1d;
+    color: #f87171;
+}
+
+/* ── Sidebar footer links (Settings + Log out) ────────────── */
+.admin-footer-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 2px;
+    transition: color 0.15s;
+}
+
+.admin-footer-link:hover {
+    color: #c9cdd6;
+}
+
+.admin-footer-link.is-active {
+    color: #e0e4ed;
+    font-weight: 600;
+}
+
+.admin-footer-link--logout {
+    color: #4b5563;
+}
+
+.admin-footer-link--logout:hover {
     color: #f87171;
 }

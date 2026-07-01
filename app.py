@@ -12,17 +12,13 @@ import joblib
 import numpy as np
 import os
 
-load_dotenv()  # reads .env into os.environ before anything else runs
+load_dotenv()
 
-import auth  # our Supabase wrapper (auth.py)
-
+import auth
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-fallback-key-change-me")
 
-# Comma-separated list of emails that get access to /admin.
-# Set ADMIN_EMAILS in Render's environment variables — never ever hardcode it here.
-# Example:  ADMIN_EMAILS=you@example.com,partner@example.com
 ADMIN_EMAILS = {
     e.strip().lower()
     for e in os.environ.get("ADMIN_EMAILS", "").split(",")
@@ -33,13 +29,12 @@ ADMIN_EMAILS = {
 @dataclass
 class Prediction:
     label: str
-    confidence: float  # 0-1
+    confidence: float
     reason: List[str]
     word_count: int
     char_count: int
 
 
-# Load model and vectorizer once when Flask starts
 model = joblib.load("models/model.joblib")
 vectorizer = joblib.load("models/vectorizer.joblib")
 
@@ -91,11 +86,18 @@ def current_user() -> Dict[str, Any] | None:
 
 
 def is_admin(user: Dict[str, Any] | None = None) -> bool:
-    """True if the given user (or the currently logged-in user) is an admin."""
     user = user if user is not None else current_user()
     if user is None:
         return False
     return user.get("email", "").lower() in ADMIN_EMAILS
+
+
+def display_name(user: Dict[str, Any] | None = None) -> str:
+    """Returns username if set, otherwise the part before @ in the email."""
+    user = user if user is not None else current_user()
+    if user is None:
+        return ""
+    return user.get("username") or user.get("email", "").split("@")[0]
 
 
 def login_required(view_func):
@@ -109,7 +111,6 @@ def login_required(view_func):
 
 
 def admin_required(view_func):
-    """Decorator for routes that require a logged-in admin."""
     @wraps(view_func)
     def wrapped(*args, **kwargs):
         user = current_user()
@@ -123,12 +124,14 @@ def admin_required(view_func):
     return wrapped
 
 
-# Makes `user` and `user_is_admin` available in every template automatically.
-# base.html uses user_is_admin to show/hide the "Admin panel" dropdown link.
 @app.context_processor
 def inject_user():
     user = current_user()
-    return {"user": user, "user_is_admin": is_admin(user)}
+    return {
+        "user": user,
+        "user_is_admin": is_admin(user),
+        "display_name": display_name(user),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +198,7 @@ def security_advice() -> str:
 
 
 # ---------------------------------------------------------------------------
-# Auth routes (email + password only)
+# Auth routes
 # ---------------------------------------------------------------------------
 
 @app.route("/login", methods=["GET", "POST"])
@@ -217,6 +220,7 @@ def login():
         "id": user["id"],
         "email": user["email"],
         "access_token": user["access_token"],
+        "username": user.get("username"),
     }
     return redirect(url_for("home"))
 
@@ -240,6 +244,7 @@ def signup():
         "id": user["id"],
         "email": user["email"],
         "access_token": user["access_token"],
+        "username": user.get("username"),
     }
     return redirect(url_for("home"))
 
@@ -297,7 +302,48 @@ def auth_reset_finish():
 
 
 # ---------------------------------------------------------------------------
-# History (JSON API consumed by the modal on index.html)
+# Settings
+# ---------------------------------------------------------------------------
+
+@app.get("/settings")
+@login_required
+def settings():
+    return render_template("settings.html")
+
+
+@app.post("/api/settings/username")
+@login_required
+def api_settings_username():
+    user = current_user()
+    data = request.get_json(silent=True) or {}
+    username = data.get("username", "").strip()
+
+    try:
+        saved = auth.update_username(user["access_token"], username)
+    except auth.AuthError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+
+    # Refresh the session so the new name shows immediately everywhere
+    session["user"] = {**user, "username": saved}
+    return jsonify({"ok": True, "username": saved})
+
+
+@app.delete("/api/settings/account")
+@login_required
+def api_settings_delete_account():
+    user = current_user()
+    try:
+        auth.delete_own_account(user["id"])
+    except auth.AuthError as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+    auth.sign_out()
+    session.clear()
+    return jsonify({"ok": True, "redirect": url_for("home")})
+
+
+# ---------------------------------------------------------------------------
+# History
 # ---------------------------------------------------------------------------
 
 @app.get("/api/history")

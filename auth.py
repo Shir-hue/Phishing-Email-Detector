@@ -18,21 +18,24 @@ if not SUPABASE_URL or not SUPABASE_ANON_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-# Lazily-created service-role client. This key bypasses Row Level Security
-# entirely and can list/ban/delete any user. It must NEVER be exposed to
-# the browser — it only ever lives here, sourced from SUPABASE_SERVICE_ROLE_KEY
-# in Render's env vars (not in git).
 _admin_client: Client | None = None
 
 
 class AuthError(Exception):
-    """Raised when Supabase rejects a signup/login attempt."""
     pass
 
 
 class AdminError(Exception):
-    """Raised when an admin operation (list/ban/unban/delete users) fails."""
     pass
+
+
+def _extract_username(user_obj) -> str | None:
+    """Pulls the username out of Supabase user_metadata, or returns None."""
+    try:
+        meta = getattr(user_obj, "user_metadata", None) or {}
+        return meta.get("username") or None
+    except Exception:
+        return None
 
 
 def sign_up(email: str, password: str) -> Dict[str, Any]:
@@ -54,6 +57,7 @@ def sign_up(email: str, password: str) -> Dict[str, Any]:
         "id": result.user.id,
         "email": result.user.email,
         "access_token": result.session.access_token,
+        "username": _extract_username(result.user),
     }
 
 
@@ -69,7 +73,12 @@ def sign_in(email: str, password: str) -> Dict[str, Any]:
         raise AuthError("Invalid email or password.")
 
     access_token = result.session.access_token if result.session else None
-    return {"id": result.user.id, "email": result.user.email, "access_token": access_token}
+    return {
+        "id": result.user.id,
+        "email": result.user.email,
+        "access_token": access_token,
+        "username": _extract_username(result.user),
+    }
 
 
 def sign_out() -> None:
@@ -80,12 +89,6 @@ def sign_out() -> None:
 
 
 def send_password_reset(email: str, redirect_url: str | None = None) -> None:
-    """
-    Sends a password reset email via Supabase.
-    The user will receive a link that redirects to redirect_url with
-    recovery tokens in the URL fragment (#access_token=...&type=recovery).
-    Raises AuthError on failure.
-    """
     try:
         options = {}
         if redirect_url:
@@ -96,12 +99,6 @@ def send_password_reset(email: str, redirect_url: str | None = None) -> None:
 
 
 def update_password(access_token: str, refresh_token: str | None, new_password: str) -> None:
-    """
-    Updates the user's password using their recovery tokens.
-    Called after the user clicks the reset link in their email and
-    submits a new password on the reset page.
-    Raises AuthError if the tokens are invalid or expired.
-    """
     try:
         client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
         client.auth.set_session(access_token, refresh_token or "")
@@ -111,6 +108,42 @@ def update_password(access_token: str, refresh_token: str | None, new_password: 
             "Could not update your password. Your reset link may have expired — "
             "please request a new one."
         ) from exc
+
+
+def update_username(access_token: str, username: str) -> str:
+    """
+    Saves a display username into the user's Supabase metadata.
+    Returns the cleaned username on success.
+    Raises AuthError on failure.
+    """
+    username = username.strip()
+    if not username:
+        raise AuthError("Username cannot be empty.")
+    if len(username) > 32:
+        raise AuthError("Username must be 32 characters or fewer.")
+
+    try:
+        client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+        client.auth.set_session(access_token, "")
+        client.auth.update_user({"data": {"username": username}})
+    except Exception as exc:
+        raise AuthError("Could not update username. Please try again.") from exc
+
+    return username
+
+
+def delete_own_account(user_id: str) -> None:
+    """
+    Permanently deletes the calling user's own account.
+    Uses the service_role client since GoTrue doesn't allow self-deletion
+    via the anon key. The caller (app.py) must verify the user is
+    authenticated before calling this.
+    """
+    client = _admin()
+    try:
+        client.auth.admin.delete_user(user_id)
+    except Exception as exc:
+        raise AuthError("Could not delete your account. Please try again.") from exc
 
 
 def _client_for(access_token: str | None) -> Client:
@@ -198,12 +231,6 @@ def _clean_error(exc: Exception) -> str:
 # ---------------------------------------------------------------------------
 
 def _admin() -> Client:
-    """
-    Returns a Supabase client authenticated with the service_role key.
-    Created lazily so a missing key only breaks admin features, not the
-    whole app. The service_role key bypasses all Row Level Security and
-    must NEVER be sent to the browser or committed to git.
-    """
     global _admin_client
     if _admin_client is None:
         if not SUPABASE_SERVICE_ROLE_KEY:
@@ -216,10 +243,6 @@ def _admin() -> Client:
 
 
 def list_users(per_page: int = 1000) -> List[Dict[str, Any]]:
-    """
-    Returns every Supabase auth user as a list of plain dicts.
-    Uses the GoTrue admin API which requires the service_role key.
-    """
     client = _admin()
     try:
         response = client.auth.admin.list_users(page=1, per_page=per_page)
@@ -230,11 +253,12 @@ def list_users(per_page: int = 1000) -> List[Dict[str, Any]]:
     for u in response:
         banned_until = getattr(u, "banned_until", None)
         is_banned = bool(banned_until) and _is_future(banned_until)
+        meta = getattr(u, "user_metadata", None) or {}
         users.append({
             "id": u.id,
             "email": u.email,
+            "username": meta.get("username") or None,
             "created_at": str(getattr(u, "created_at", "")),
-            "confirmed": getattr(u, "email_confirmed_at", None) is not None,
             "banned": is_banned,
         })
     users.sort(key=lambda u: u["created_at"], reverse=True)
@@ -242,7 +266,6 @@ def list_users(per_page: int = 1000) -> List[Dict[str, Any]]:
 
 
 def _is_future(value: Any) -> bool:
-    """Best-effort check that a banned_until timestamp is still in the future."""
     try:
         if isinstance(value, str):
             ts = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -252,14 +275,10 @@ def _is_future(value: Any) -> bool:
             ts = ts.replace(tzinfo=timezone.utc)
         return ts > datetime.now(timezone.utc)
     except Exception:
-        return True  # if we can't parse it, assume banned
+        return True
 
 
 def ban_user(user_id: str) -> None:
-    """
-    Bans a user for ~100 years (effectively permanent). Banned users
-    are rejected by Supabase at sign-in before our code even runs.
-    """
     client = _admin()
     try:
         client.auth.admin.update_user_by_id(user_id, {"ban_duration": "876000h"})
@@ -268,7 +287,6 @@ def ban_user(user_id: str) -> None:
 
 
 def unban_user(user_id: str) -> None:
-    """Lifts a ban, restoring normal sign-in access."""
     client = _admin()
     try:
         client.auth.admin.update_user_by_id(user_id, {"ban_duration": "none"})
@@ -277,7 +295,6 @@ def unban_user(user_id: str) -> None:
 
 
 def delete_user(user_id: str) -> None:
-    """Permanently deletes a user from Supabase Auth."""
     client = _admin()
     try:
         client.auth.admin.delete_user(user_id)
@@ -286,10 +303,6 @@ def delete_user(user_id: str) -> None:
 
 
 def total_prediction_count() -> int:
-    """
-    Total number of prediction rows across all users.
-    Uses the service_role client to bypass per-user RLS.
-    """
     client = _admin()
     try:
         response = client.table("predictions").select("id", count="exact").execute()

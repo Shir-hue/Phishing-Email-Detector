@@ -32,8 +32,8 @@
             <div class="auth-links profile-menu" id="profileMenu">
                 <button type="button" class="profile-trigger" id="profileTriggerBtn" aria-haspopup="true"
                     aria-expanded="false" aria-controls="profileDropdown">
-                    <span class="profile-avatar" aria-hidden="true">{{ user.email[0] | upper }}</span>
-                    <span class="profile-name">{{ user.email.split('@')[0] }}</span>
+                    <span class="profile-avatar" aria-hidden="true">{{ display_name[0] | upper }}</span>
+                    <span class="profile-name">{{ display_name }}</span>
                     <svg class="profile-chevron" width="10" height="10" viewBox="0 0 12 12" aria-hidden="true">
                         <path d="M2.5 4.5 6 8l3.5-3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
                             stroke-linejoin="round" fill="none" />
@@ -44,7 +44,9 @@
                     <a class="profile-dropdown-item" href="{{ url_for('admin_dashboard') }}" role="menuitem">Admin
                         panel</a>
                     {% endif %}
-                    <a class="profile-dropdown-item" href="{{ url_for('logout') }}" role="menuitem">Log out</a>
+                    <a class="profile-dropdown-item" href="{{ url_for('settings') }}" role="menuitem">Settings</a>
+                    <a class="profile-dropdown-item profile-dropdown-item--danger" href="{{ url_for('logout') }}"
+                        role="menuitem">Log out</a>
                 </div>
             </div>
             {% else %}
@@ -78,6 +80,7 @@
             {% if user_is_admin %}
             <a class="mobile-nav-link" href="{{ url_for('admin_dashboard') }}">Admin panel</a>
             {% endif %}
+            <a class="mobile-nav-link" href="{{ url_for('settings') }}">Settings</a>
             <a class="mobile-nav-link" href="{{ url_for('logout') }}">Log out</a>
             {% else %}
             <a class="mobile-nav-link" href="{{ url_for('login') }}">Log in</a>
@@ -114,6 +117,7 @@
                 <div class="footer-col">
                     <div class="footer-col-label">Account</div>
                     {% if user %}
+                    <a class="footer-link" href="{{ url_for('settings') }}">Settings</a>
                     <a class="footer-link" href="{{ url_for('logout') }}">Log out</a>
                     {% else %}
                     <a class="footer-link" href="{{ url_for('login') }}">Log in</a>
@@ -178,7 +182,6 @@
             });
         })();
 
-        // ===== Profile dropdown (only present when logged in) =====
         (function () {
             const menu = document.getElementById('profileMenu');
             if (!menu) return;
@@ -211,7 +214,6 @@
             });
         })();
 
-        // ===== Logout transition overlay =====
         (function () {
             const overlay = document.getElementById('pageTransitionOverlay');
             if (!overlay) return;
